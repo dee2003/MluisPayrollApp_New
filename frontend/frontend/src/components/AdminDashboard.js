@@ -662,6 +662,44 @@ import { FaUser, FaHardHat, FaTasks, FaBox, FaBriefcase, FaUsers, FaTrash, FaBar
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const API_URL = "http://127.0.0.1:8000/api";
+// Pagination controls component (reusable)
+const PaginationControls = ({ currentPage, totalPages, onPaginate }) => {
+  if (totalPages <= 1) return null;
+  const pageNumbers = [];
+  for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+  return (
+    <nav className="pagination-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '16px 0' }}>
+      <button onClick={() => onPaginate(currentPage - 1)} disabled={currentPage === 1} className="btn btn-sm">
+        <FaChevronLeft /> Prev
+      </button>
+      <ul className="pagination-list" style={{ display: "inline-flex", listStyle: "none", margin: '0 8px' }}>
+        {pageNumbers.map(number => (
+          <li key={number} style={{ margin: "0 2px" }}>
+            <button
+              onClick={() => onPaginate(number)}
+              className={`page-link${currentPage === number ? " active" : ""}`}
+              style={{
+                minWidth: 32,
+                padding: '6px 12px',
+                background: currentPage === number ? '#007bff' : "#fff",
+                color: currentPage === number ? '#fff' : "#333",
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                marginRight: 2,
+                fontWeight: 500
+              }}
+            >
+              {number}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button onClick={() => onPaginate(currentPage + 1)} disabled={currentPage === totalPages} className="btn btn-sm">
+        Next <FaChevronRight />
+      </button>
+    </nav>
+  );
+};
 
 // --- Reusable Modal Component (Unchanged) ---
 const Modal = ({ title, children, onClose, size = "medium" }) => (
@@ -933,6 +971,18 @@ const JobPhasesViewModal = ({ job, onClose }) => (
 );
 
 
+// Mapping from section key to page number
+const SECTIONS = [
+    "users","employees","equipment","job_phases",
+    "materials","vendors","dumping_sites","crewMapping"
+];
+const ITEMS_PER_PAGE = 1; // or desired default
+
+
+const capitalizeFirstLetter = (str) => {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
 
 // --- Main Admin Dashboard Component ---
 const AdminDashboard = ({ data: initialData, onLogout }) => {
@@ -954,6 +1004,16 @@ const AdminDashboard = ({ data: initialData, onLogout }) => {
     const [formError, setFormError] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState(null);
+      const [pagination, setPagination] = useState(
+    Object.fromEntries(SECTIONS.map((sec) => [sec, 1]))
+  );
+  const handlePaginate = (section, pageNumber, totalPages) => {
+    const clamped = Math.max(1, Math.min(pageNumber, totalPages));
+    setPagination(prev => ({ ...prev, [section]: clamped }));
+  };
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, [activeSection]: 1 }));
+  }, [activeSection]);
     const showNotification = (message) => setNotification({ shown: true, message });
     const showConfirmation = (message, onConfirmAction) => setConfirmation({ shown: true, message, onConfirm: () => {
         onConfirmAction();
@@ -1004,6 +1064,8 @@ const AdminDashboard = ({ data: initialData, onLogout }) => {
         
         fetchData();
     }, []);
+
+
 
     useEffect(() => {
         const now = new Date();
@@ -1117,11 +1179,12 @@ catch (error) {
 const handleToggleStatus = async (type, item) => {
   const stateKey = typeToStateKey[type];
 
+
   // Convert to lowercase for backend
   const currentStatus = item.status?.toLowerCase();
   const newStatus = currentStatus === "active" ? "inactive" : "active";
 
-  const updatedItem = { ...item, status: newStatus };
+  const updatedItem = { ...item, status: newStatus.toLowerCase() }; // send "inactive" or "active"
 
   try {
     const response = await axios.put(
@@ -1214,25 +1277,38 @@ const prepareJobForEditModal = (job) => {
     };
 
     const renderSection = () => {
-        const makeTable = (type, title, headers, rowRender, itemLabel) => {
+        const makeTableWithPagination  = (type, title, headers, rowRender, itemLabel) => {
             const label = itemLabel || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             const key = typeToStateKey[type];
-            return (<DataTableSection 
-                        title={title} 
-                        headers={headers} 
-                        data={data[key] || []} 
-                        renderRow={(item) => <>{rowRender(item)}</>} 
-                        onAdd={() => setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })} 
-                        onEdit={item => setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })} 
-                        onDelete={id => handleDeleteItem(type, id)}
-                        // ✅ FIX: Pass props to DataTableSection
-                        handleToggleStatus={handleToggleStatus}
-                        activeSection={type}
-                    />);
-        };
+            const dataArr = data[key] || [];
+    const currentPage = pagination[key];
+    const itemsPerPage = ITEMS_PER_PAGE;
+    const totalPages = Math.ceil(dataArr.length / itemsPerPage);
+    const pagedData = dataArr.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+           return (
+        <div>
+            <DataTableSection
+                title={title}
+                headers={headers}
+                data={pagedData}
+                renderRow={(item) => <>{rowRender(item)}</>}
+                onAdd={() => setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })}
+                onEdit={item => setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })}
+                onDelete={id => handleDeleteItem(type, id)}
+                handleToggleStatus={handleToggleStatus}
+                activeSection={type}
+            />
+            <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPaginate={pageNum => handlePaginate(key, pageNum, totalPages)}
+            />
+        </div>
+    );
+};
         switch (activeSection) {
             case "users": 
-                return makeTable(
+                return makeTableWithPagination(
                     "user", 
                     "User Management", 
                     ["Username", "First Name", "Last Name", "Role"], 
@@ -1246,19 +1322,20 @@ const prepareJobForEditModal = (job) => {
                     )
                 );
             case "employees": 
-                return makeTable("employee", "Employee Management", ["ID", "Name", "Class", "Status"], e => {
+                return makeTableWithPagination("employee", "Employee Management", ["ID", "Name", "Class", "Status"], e => {
                     const fullName = `${e.first_name} ${e.middle_name ? e.middle_name + ' ' : ''}${e.last_name}`;
                     return (<> 
                         <td key={e.id}>{e.id}</td> 
                         <td key={fullName}>{fullName}</td> 
                         <td key={e.class_1}>{`${e.class_1 || ""}${e.class_2 ? " / " + e.class_2 : ""}`}</td> 
-                        <td key={e.status}>{e.status}</td> 
+                        <td key={e.status}>{capitalizeFirstLetter(e.status)}</td>
+
                     </>);
                 });
 // Inside the renderSection function...
 // In AdminDashboard.js, inside renderSection...
 case "equipment": 
-    return makeTable(
+    return makeTableWithPagination(
         "equipment", 
         "Equipment Management", 
         ["ID", "Name", "Category Name", "Department", "Category No.", "VIN No.", "Status"], 
@@ -1269,22 +1346,26 @@ case "equipment":
             <td key={e.department}>{e.department}</td> 
             <td key={e.category_number}>{e.category_number}</td> 
             <td key={e.vin_number}>{e.vin_number}</td> 
-            <td key={e.status}>{e.status}</td> 
+            <td key={e.status}>{capitalizeFirstLetter(e.status)}</td>
+
         </>)
     );
 
 
 
             case "vendors": 
-                return makeTable("vendor", "Work Performed", ["Name", "Unit", "Status"], v => <><td key={v.name}>{v.name}</td><td key={v.unit}>{v.unit}</td><td key={v.status}>{v.status}</td></>, "Work Performed");
+                return makeTableWithPagination("vendor", "Work Performed", ["Name", "Unit", "Status"], v => <><td key={v.name}>{v.name}</td><td key={v.unit}>{v.unit}</td><td key={v.status}>{capitalizeFirstLetter(v.status)}</td>
+</>, "Work Performed");
             case "materials": 
-                return makeTable("material", "Materials and Trucking", ["Name", "Status"], m => <><td key={m.name}>{m.name}</td><td key={m.status}>{m.status}</td></>, "Material and Trucking");
+                return makeTableWithPagination("material", "Materials and Trucking", ["Name", "Status"], m => <><td key={m.name}>{m.name}</td><td key={m.status}>{capitalizeFirstLetter(m.status)}</td>
+</>, "Material and Trucking");
             case "job_phases": 
                 return (<DataTableSection 
                             title="Jobs & Phases Management" 
                             headers={["Job Code", "Description", "Project Engineer", "Status"]} 
                             data={data.job_phases || []} 
-                            renderRow={job => (<> <td>{job.job_code}</td> <td>{job.job_description}</td> <td>{job.project_engineer}</td> <td>{job.status}</td> </>)} 
+                            renderRow={job => (<> <td>{job.job_code}</td> <td>{job.job_description}</td> <td>{job.project_engineer}</td> <td>{capitalizeFirstLetter(job.status)}</td>
+ </>)} 
                             onAdd={() => setJobModal({ shown: true, mode: "add", job: null })} 
                             onEdit={(job) => setJobModal({ shown: true, mode: "edit", job: prepareJobForEditModal(job) })} 
                             onDelete={(job_code) => handleDeleteItem("job_phase", job_code)} 
@@ -1294,7 +1375,8 @@ case "equipment":
                             activeSection="job_phase"
                         />);
             case "dumping_sites": 
-                return makeTable("dumping_site", "Dumping Site Management", ["Site ID", "Site Name", "Status"], ds => (<><td key={ds.id}>{ds.id}</td><td key={ds.name}>{ds.name}</td><td key={ds.status}>{ds.status}</td></>), "Dumping Site");
+                return makeTableWithPagination("dumping_site", "Dumping Site Management", ["Site ID", "Site Name", "Status"], ds => (<><td key={ds.id}>{ds.id}</td><td key={ds.name}>{ds.name}</td><td key={ds.status}>{capitalizeFirstLetter(ds.status)}</td>
+</>), "Dumping Site");
             case "crewMapping": 
                 const allResources = { 
                     users: data.users || [], employees: data.employees || [], equipment: data.equipment || [], 
@@ -1417,13 +1499,18 @@ const DataTableSection = ({ title, headers, data = [], renderRow, onDelete, onAd
                             {onEdit && <button onClick={() => onEdit(item)} className="btn-edit btn-sm">Edit</button>}
                             {item.status && handleToggleStatus && ( // Check if handleToggleStatus is passed
                                 <button
-                                    onClick={() => handleToggleStatus(activeSection, item)}
-                                    className={`btn-sm ${
-                                        item.status === "Active" ? "btn-outline-danger" : "btn-outline-success"
-                                    }`}
-                                >
-                                    {item.status === "Active" ? "Deactivate" : "Activate"}
-                                </button>
+    onClick={() => handleToggleStatus(activeSection, item)}
+    // Update button style for status
+    className={`btn-sm ${item.status.toLowerCase() === "active" ? "btn-outline-danger" : "btn-outline-success"}`}
+    style={{
+      backgroundColor: item.status.toLowerCase() === "inactive" ? "#3889d0ff" : "#ea5362ff", // grey for inactive, red for active
+      color: "#fff",
+      border: 'none',
+      marginRight: 5
+    }}
+  >
+    {item.status.toLowerCase() === "active" ? "Deactivate" : "Activate"}
+  </button>
                             )}
                             {extraActions && extraActions(item)}
                         </td>

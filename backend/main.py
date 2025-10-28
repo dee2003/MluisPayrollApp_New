@@ -328,7 +328,7 @@ app.add_middleware(
 # Static Files
 # -------------------------------
 app.mount("/storage", StaticFiles(directory="storage"), name="storage")
-TICKETS_DIR = r"C:\Mluis_App\mluis_app\backend\tickets"
+TICKETS_DIR = r"D:\GitMobileApp\MluisPayrollApp_New\backend\tickets"
 app.mount("/media/tickets", StaticFiles(directory=os.path.abspath(TICKETS_DIR)), name="tickets")
 
 # -------------------------------
