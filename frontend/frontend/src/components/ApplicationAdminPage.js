@@ -26,9 +26,20 @@ export default function ApplicationAdmin() {
   
   const [currentPage, setCurrentPage] = useState(1);
   const timesheetsPerPage = TIMESHEETS_PER_PAGE;
-
+  const [searchForeman, setSearchForeman] = useState("");
+  const [searchJobCode, setSearchJobCode] = useState("");
+  const filteredTimesheets = timesheets.filter((ts) => {
+  const foremanMatch = ts.foreman_name
+    ?.toLowerCase()
+    .includes(searchForeman.toLowerCase());
+  const jobCodeMatch = ts.data?.job?.job_code
+    ?.toLowerCase()
+    .includes(searchJobCode.toLowerCase());
+  return foremanMatch && jobCodeMatch;
+});
   // 🟢 Key: totalPages is now always computed, never in state!
-  const totalPages = Math.ceil(timesheets.length / timesheetsPerPage);
+  // const totalPages = Math.ceil(timesheets.length / timesheetsPerPage);
+  const totalPages = Math.ceil(filteredTimesheets.length / timesheetsPerPage);
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -150,9 +161,12 @@ export default function ApplicationAdmin() {
   // ⭐️ PAGINATION LOGIC ⭐️
   const indexOfLastTimesheet = currentPage * timesheetsPerPage;
   const indexOfFirstTimesheet = indexOfLastTimesheet - timesheetsPerPage;
-  const currentTimesheets = timesheets.slice(indexOfFirstTimesheet, indexOfLastTimesheet);
+  // const currentTimesheets = timesheets.slice(indexOfFirstTimesheet, indexOfLastTimesheet);
+  const currentTimesheets = filteredTimesheets.slice(indexOfFirstTimesheet, indexOfLastTimesheet);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  // ⭐️ FILTER LOGIC ⭐️
+
 
   // ⭐️ PAGINATION CONTROLS COMPONENT ⭐️
   const PaginationControls = () => {
@@ -256,6 +270,45 @@ export default function ApplicationAdmin() {
             <h2 className="view-title">
               <FaClipboardList /> View Timesheets
             </h2>
+            <div className="filter-bar">
+  <div className="filter-item">
+    <label>Foreman:</label>
+    <input
+      type="text"
+      placeholder="Enter Foreman Name"
+      value={searchForeman}
+      onChange={(e) => {
+        setSearchForeman(e.target.value);
+        setCurrentPage(1);
+      }}
+    />
+  </div>
+
+  <div className="filter-item">
+    <label>Job Code:</label>
+    <input
+      type="text"
+      placeholder="Enter Job Code"
+      value={searchJobCode}
+      onChange={(e) => {
+        setSearchJobCode(e.target.value);
+        setCurrentPage(1);
+      }}
+    />
+  </div>
+
+  <button
+    className="btn btn-outline btn-sm"
+    onClick={() => {
+      setSearchForeman("");
+      setSearchJobCode("");
+    }}
+  >
+    Clear Filters
+  </button>
+</div>
+
+
             {error && <div className="alert alert-error">{error}</div>}
             {successMessage && <div className="alert alert-success">{successMessage}</div>}
             {timesheets.length ? (

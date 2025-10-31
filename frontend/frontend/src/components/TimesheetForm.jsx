@@ -17,7 +17,8 @@ const TimesheetForm = ({ onClose }) => {
     const [timeOfDay, setTimeOfDay] = useState("");
     const [weather, setWeather] = useState("");
     const [temperature, setTemperature] = useState("");
-    const [location, setLocation] = useState("");
+    const [locations, setLocations] = useState([]);   // list of all locations
+const [location, setLocation] = useState(""); 
     const [projectEngineer, setProjectEngineer] = useState("");
     const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
     const [loading, setLoading] = useState(false);
@@ -41,6 +42,18 @@ const TimesheetForm = ({ onClose }) => {
     const [truckingDetails, setTruckingDetails] = useState("");
     const [sweepingDetails, setSweepingDetails] = useState("");
     const [contract, setContract] = useState("");
+    const [suppliers, setSuppliers] = useState([]);
+
+useEffect(() => {
+  axios.get(`${API_URL}/suppliers/`)
+    .then(res => {
+      console.log("Fetched suppliers:", res.data);
+      setSuppliers(res.data);
+    })
+    .catch(err => console.error('Error fetching suppliers:', err));
+}, []);
+
+
     // --- Load initial data (Foremen and Job Codes) ---
     useEffect(() => {
         axios.get(`${API_URL}/users`)
@@ -50,7 +63,7 @@ const TimesheetForm = ({ onClose }) => {
             })
             .catch(err => console.error("Failed to load foremen:", err));
 
-        axios.get(`${API_URL}/job-phases/`)
+        axios.get(`${API_URL}/job-phases/active`)
             .then((res) => setJobCodes(res.data))
             .catch(err => console.error("Failed to load job codes:", err));
     }, []);
@@ -81,6 +94,15 @@ const TimesheetForm = ({ onClose }) => {
             });
     }, [selectedForemanId]);
 
+
+    useEffect(() => {
+    setLoading(true);
+    axios
+      .get(`${API_URL}/locations/`)
+      .then((res) => setLocations(res.data))
+      .catch((err) => console.error("Error fetching locations:", err))
+      .finally(() => setLoading(false));
+  }, []);
     // --- Load job details ---
     useEffect(() => {
         if (!selectedJobCode) {
@@ -170,7 +192,21 @@ const TimesheetForm = ({ onClose }) => {
             setLoading(false);
         }
     };
+const concreteSupplierOptions = suppliers
+  .map(s => s.concrete_supplier)
+  .filter(name => name && name.trim() !== "");
 
+const asphaltSupplierOptions = suppliers
+  .map(s => s.asphalt_supplier)
+  .filter(name => name && name.trim() !== "");
+
+const aggregateSupplierOptions = suppliers
+  .map(s => s.aggregate_supplier)
+  .filter(name => name && name.trim() !== "");
+
+const topSoilSupplierOptions = suppliers
+  .map(s => s.top_soil_supplier)
+  .filter(name => name && name.trim() !== "");
     return (
         <div className="timesheet-page-container">
             <header className="page-header">
@@ -311,7 +347,7 @@ const TimesheetForm = ({ onClose }) => {
                                 </select>
                             </div>
                         </div>
-                        <div className="form-group">
+                        {/* <div className="form-group">
                             <label htmlFor="location">Location</label>
                             <input
                                 id="location" type="text" className="form-input"
@@ -319,8 +355,26 @@ const TimesheetForm = ({ onClose }) => {
                                 disabled={loading}
                             />
                         </div>
-                        
+                         */}
                     
+                        <div className="form-group">
+  <label htmlFor="location">Location</label>
+  <select
+    id="location"
+    className="form-input"
+    value={location}
+    onChange={(e) => setLocation(e.target.value)}
+    disabled={loading}
+  >
+    <option value="">Select Location</option>
+    {locations.map((loc) => (
+      <option key={loc.id} value={loc.name}>
+        {loc.name}
+      </option>
+    ))}
+  </select>
+</div>
+
 
                         <div className="form-group">
                         <label htmlFor="workDescription">Work description</label>
@@ -338,10 +392,21 @@ const TimesheetForm = ({ onClose }) => {
 <div className="grid-2-cols">
   <div className="form-group">
     <label>Supplier</label>
-    <input type="text" value={concreteSupplier}
+   <select
+      className="form-input"
+      value={concreteSupplier}
       onChange={(e) => setConcreteSupplier(e.target.value)}
-      className="form-input" />
-  </div>
+    >
+    
+      <option value="">Select Concrete Supplier</option>
+      {concreteSupplierOptions.length === 0 && <option disabled>No suppliers available</option>}
+      {concreteSupplierOptions.map((name, index) => (
+        <option key={index} value={name}>{name}</option>
+        
+      ))}
+    </select>
+    
+</div>
   <div className="form-group">
     <label>Order Details</label>
     <input type="text" value={concreteOrderDetails}
@@ -360,9 +425,17 @@ const TimesheetForm = ({ onClose }) => {
 <div className="grid-2-cols">
   <div className="form-group">
     <label>Supplier</label>
-    <input type="text" value={asphaltSupplier}
+     <select
+      className="form-input"
+      value={asphaltSupplier}
       onChange={(e) => setAsphaltSupplier(e.target.value)}
-      className="form-input" />
+    >
+      <option value="">Select Asphalt Supplier</option>
+      {asphaltSupplierOptions.length === 0 && <option disabled>No suppliers available</option>}
+      {asphaltSupplierOptions.map((name, index) => (
+        <option key={index} value={name}>{name}</option>
+      ))}
+    </select>
   </div>
   <div className="form-group">
     <label>Order Details</label>
@@ -376,9 +449,17 @@ const TimesheetForm = ({ onClose }) => {
 <div className="grid-2-cols">
   <div className="form-group">
     <label>Supplier</label>
-    <input type="text" value={aggregateSupplier}
+    <select
+      className="form-input"
+      value={aggregateSupplier}
       onChange={(e) => setAggregateSupplier(e.target.value)}
-      className="form-input" />
+    >
+      <option value="">Select Aggregate Supplier</option>
+      {aggregateSupplierOptions.length === 0 && <option disabled>No suppliers available</option>}
+      {aggregateSupplierOptions.map((name, index) => (
+        <option key={index} value={name}>{name}</option>
+      ))}
+    </select>
   </div>
   <div className="form-group">
     <label>Order Details</label>
@@ -392,9 +473,17 @@ const TimesheetForm = ({ onClose }) => {
 <div className="grid-2-cols">
   <div className="form-group">
     <label>Supplier</label>
-    <input type="text" value={topSoilSupplier}
+    <select
+      className="form-input"
+      value={topSoilSupplier}
       onChange={(e) => setTopSoilSupplier(e.target.value)}
-      className="form-input" />
+    >
+      <option value="">Select Top Soil Supplier</option>
+      {topSoilSupplierOptions.length === 0 && <option disabled>No suppliers available</option>}
+      {topSoilSupplierOptions.map((name, index) => (
+        <option key={index} value={name}>{name}</option>
+      ))}
+    </select>
   </div>
   <div className="form-group">
     <label>Order Details</label>

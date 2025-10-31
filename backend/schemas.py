@@ -57,21 +57,79 @@ class Employee(EmployeeBase):
 class EquipmentBase(BaseModel):
     id: str
     name: str
-    category: str  # <--- THIS IS THE FIX: Changed from 'type' to 'category'
+    # category: str  # <--- THIS IS THE FIX: Changed from 'type' to 'category'
     status: str
-    department: Optional[str] = None
-    category_number: Optional[str] = None
+    # department: Optional[str] = None
+    # category_number: Optional[str] = None
     vin_number: Optional[str] = None
+    category_id: Optional[int]
+    department_id: Optional[int]
     model_config = ConfigDict(from_attributes=True)
 
-class EquipmentCreate(EquipmentBase): 
-    pass
+# class EquipmentCreate(EquipmentBase): 
+#     pass
+class EquipmentCreate(BaseModel):
+    id: str
+    name: str
+    category_id: int
+    department_id: int
+    vin_number: Optional[str] = None
+    status: Optional[str] = None
 
-class Equipment(EquipmentBase):
-    model_config = model_config
+# class Equipment(EquipmentBase):
+#     model_config = model_config
 class EquipmentUpdate(EquipmentBase):
     pass
-class EquipmentInDB(EquipmentBase):
+# class EquipmentInDB(EquipmentBase):
+#     class Config:
+#         orm_mode = True
+
+from pydantic import BaseModel, ConfigDict
+
+# Nested schemas for related models
+class CategoryOut(BaseModel):
+    id: int
+    name: str
+    number: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DepartmentOut(BaseModel):
+    id: int
+    name: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+class CategoryBase(BaseModel):
+    id: int
+    name: str
+    number: str
+
+    class Config:
+        orm_mode = True
+
+class DepartmentBase(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+class EquipmentInDB(BaseModel):
+    id: str
+    name: str
+    vin_number: str
+    status: str
+    category_id: Optional[int]
+    department_id: Optional[int]
+    category_rel: Optional[CategoryBase]
+    department_rel: Optional[DepartmentBase]
+
+    class Config:
+        orm_mode = True
+class Equipment(EquipmentBase):
+    category_rel: Optional[CategoryBase]
+    department_rel: Optional[DepartmentBase]
+
     class Config:
         orm_mode = True
 # ===============================
@@ -126,7 +184,7 @@ class JobPhaseBase(BaseModel):
     contract_no: Optional[str] = None
     job_description: Optional[str] = None
     project_engineer: Optional[str] = None
-    jurisdiction: Optional[str] = None
+    location_id: Optional[int] = None
     status: ResourceStatus = ResourceStatus.ACTIVE
     phase_codes: List[str] = []  # list of string codes sent from frontend
 
@@ -155,6 +213,15 @@ class JobPhase(BaseModel):
     status: ResourceStatus
     phase_codes: List[PhaseCode] = []
 
+    class Config:
+        orm_mode = True
+
+
+class LocationBase(BaseModel):
+    name: str
+
+class LocationOut(LocationBase):
+    id: int
     class Config:
         orm_mode = True
 
@@ -443,3 +510,22 @@ class PENotification(BaseModel):
     job_code: Optional[str]
     timesheet_count: int
     ticket_count: int
+
+
+
+
+from typing import Optional
+
+class SupplierBase(BaseModel):
+    concrete_supplier: Optional[str]
+    asphalt_supplier: Optional[str]
+    aggregate_supplier: Optional[str]
+    top_soil_supplier: Optional[str]
+
+class SupplierCreate(SupplierBase):
+    pass
+
+class Supplier(SupplierBase):
+    id: int
+    class Config:
+        orm_mode = True

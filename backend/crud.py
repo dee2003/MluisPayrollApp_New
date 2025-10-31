@@ -9,7 +9,7 @@ from . import crew_services  # ✅ --- ADD THIS LINE ---
 
 from . import models, schemas, utils
 from .database import get_db
-
+from sqlalchemy.orm import joinedload
 # =======================================================================
 # 1. Generic CRUD Router Factory
 # =======================================================================
@@ -62,13 +62,24 @@ def create_crud_router(
         return db_item
 
     # --- READ ALL ---
+    # @router.get("/", response_model=List[response_schema])
+    # def list_items(db: Session = Depends(get_db)):
+    #     query = db.query(model)
+    #     if hasattr(model, 'status'):
+    #     # Filter the query to only include items where the status is not 'inactive'.
+    #         query = query.filter(model.status != models.ResourceStatus.INACTIVE)
+    #     return db.query(model).all()
     @router.get("/", response_model=List[response_schema])
     def list_items(db: Session = Depends(get_db)):
         query = db.query(model)
+        if model.__name__ == "Equipment":
+            query = query.options(
+                orm.joinedload(model.category_rel),
+                orm.joinedload(model.department_rel),
+            )
         if hasattr(model, 'status'):
-        # Filter the query to only include items where the status is not 'inactive'.
             query = query.filter(model.status != models.ResourceStatus.INACTIVE)
-        return db.query(model).all()
+        return query.all()
 
     # --- READ ONE ---
     @router.get("/{item_id}", response_model=response_schema)
@@ -78,7 +89,7 @@ def create_crud_router(
             raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
         return db_item
 
-    # --- UPDATE ---
+
     @router.put("/{item_id}", response_model=response_schema)
     def update_item(item_id: pk_type, item: create_schema, db: Session = Depends(get_db)):
         db_item = db.query(model).filter(pk_column == item_id).first()
@@ -87,53 +98,110 @@ def create_crud_router(
         
         update_data = item.dict(exclude_unset=True)
 
-        # 👇 ===== START OF SNAPSHOT INTEGRATION LOGIC ===== 👇
-        
         resource_models = ["Employee", "Equipment", "Material", "Vendor", "DumpingSite"]
         is_resource_status_change = (
             model.__name__ in resource_models and
-            'status' in update_data and
-            hasattr(db_item, 'status') and 
-            db_item.status.value != update_data['status']
+            "status" in update_data and
+            hasattr(db_item, "status") and
+            getattr(db_item.status, "value", db_item.status) != update_data["status"]
         )
 
         if is_resource_status_change:
-            new_status = update_data['status']
-            current_user_id = 1  # Placeholder for logged-in user ID from auth dependency
+            new_status = update_data["status"]
+            current_user_id = 1  # placeholder for auth
+            print(f"✅ Status change detected for {model.__name__} {item_id}: {db_item.status} -> {new_status}")
 
-            # Dynamically access the relationship on CrewMapping (e.g., CrewMapping.employees)
             relationship_attr = getattr(models.CrewMapping, model.__tablename__)
             crews_to_update = db.query(models.CrewMapping).filter(relationship_attr.any(id=item_id)).all()
 
             for crew in crews_to_update:
-                if new_status.lower() == 'inactive':
+                if new_status.lower() == "inactive":
                     notes = f"{model.__name__} '{item_id}' status changed to Inactive."
                     crew_services.create_crew_snapshot(db, crew.id, user_id=current_user_id, notes=notes)
-                    
                     crew.status = "Partially Inactive"
-                    # Dynamically get the list of members from the crew object and filter it
                     member_list = getattr(crew, model.__tablename__)
                     filtered_list = [member for member in member_list if member.id != item_id]
                     setattr(crew, model.__tablename__, filtered_list)
 
-                elif new_status.lower() == 'active':
+                elif new_status.lower() == "active":
                     latest_ref = db.query(models.CrewMappingReference).filter(
                         models.CrewMappingReference.crew_mapping_id == crew.id
                     ).order_by(models.CrewMappingReference.created_at.desc()).first()
-
                     if latest_ref:
                         crew_services.restore_from_reference(db, latest_ref.id)
                     crew.status = "Active"
-        
-        # 👆 ===== END OF SNAPSHOT INTEGRATION LOGIC ===== 👆
 
-        # Apply the original update to the resource itself
+            # ✅ Persist the new status safely
+            db_item.status = new_status
+
+        # ✅ Now update the rest safely (but skip status to prevent overwrite)
         for key, value in update_data.items():
-            setattr(db_item, key, value)
-            
+            if key != "status":
+                setattr(db_item, key, value)
+            if is_resource_status_change:
+                print(f"✅ Status change detected for {model.__name__} {item_id}: {db_item.status} -> {update_data['status']}")
+
         db.commit()
         db.refresh(db_item)
         return db_item
+
+
+    # --- UPDATE ---
+    # @router.put("/{item_id}", response_model=response_schema)
+    # def update_item(item_id: pk_type, item: create_schema, db: Session = Depends(get_db)):
+    #     db_item = db.query(model).filter(pk_column == item_id).first()
+    #     if not db_item:
+    #         raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
+        
+    #     update_data = item.dict(exclude_unset=True)
+
+    #     # 👇 ===== START OF SNAPSHOT INTEGRATION LOGIC ===== 👇
+        
+    #     resource_models = ["Employee", "Equipment", "Material", "Vendor", "DumpingSite"]
+    #     is_resource_status_change = (
+    #         model.__name__ in resource_models and
+    #         'status' in update_data and
+    #         hasattr(db_item, 'status') and 
+    #         db_item.status.value != update_data['status']
+    #     )
+
+    #     if is_resource_status_change:
+    #         new_status = update_data['status']
+    #         current_user_id = 1  # Placeholder for logged-in user ID from auth dependency
+
+    #         # Dynamically access the relationship on CrewMapping (e.g., CrewMapping.employees)
+    #         relationship_attr = getattr(models.CrewMapping, model.__tablename__)
+    #         crews_to_update = db.query(models.CrewMapping).filter(relationship_attr.any(id=item_id)).all()
+
+    #         for crew in crews_to_update:
+    #             if new_status.lower() == 'inactive':
+    #                 notes = f"{model.__name__} '{item_id}' status changed to Inactive."
+    #                 crew_services.create_crew_snapshot(db, crew.id, user_id=current_user_id, notes=notes)
+                    
+    #                 crew.status = "Partially Inactive"
+    #                 # Dynamically get the list of members from the crew object and filter it
+    #                 member_list = getattr(crew, model.__tablename__)
+    #                 filtered_list = [member for member in member_list if member.id != item_id]
+    #                 setattr(crew, model.__tablename__, filtered_list)
+
+    #             elif new_status.lower() == 'active':
+    #                 latest_ref = db.query(models.CrewMappingReference).filter(
+    #                     models.CrewMappingReference.crew_mapping_id == crew.id
+    #                 ).order_by(models.CrewMappingReference.created_at.desc()).first()
+
+    #                 if latest_ref:
+    #                     crew_services.restore_from_reference(db, latest_ref.id)
+    #                 crew.status = "Active"
+        
+    #     # 👆 ===== END OF SNAPSHOT INTEGRATION LOGIC ===== 👆
+
+    #     # Apply the original update to the resource itself
+    #     for key, value in update_data.items():
+    #         setattr(db_item, key, value)
+            
+    #     db.commit()
+    #     db.refresh(db_item)
+    #     return db_item
 
     # --- DELETE ---
     @router.delete("/{item_id}")

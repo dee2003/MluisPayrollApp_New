@@ -304,7 +304,8 @@ class ResourceStatus(str, enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     MAINTENANCE = "maintenance"
-
+    ON_LEAVE = "on_leave"
+    ON_HOLD = "on_hold"
 # In models.py
 
 class SubmissionStatus(str, enum.Enum):
@@ -416,12 +417,35 @@ class Equipment(Base):
     __tablename__ = "equipment"
     id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    category = Column(String, nullable=False)
-    department = Column(String, nullable=True)
-    category_number = Column(String, nullable=True)
+    # category = Column(String, nullable=False)
+    # department = Column(String, nullable=True)
+    category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
+    department_id = Column(Integer, ForeignKey("department.id"), nullable=True)
+    # category_number = Column(String, nullable=True)
     vin_number = Column(String, nullable=True)
     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
+    category_rel = relationship("Category", back_populates="equipments")
+    department_rel = relationship("Department", back_populates="equipments")
 
+class Department(Base):
+    __tablename__ = "department"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+
+    # one-to-many relationship
+    equipments = relationship("Equipment", back_populates="department_rel")
+
+
+class Category(Base):
+    __tablename__ = "category"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    number = Column(String, unique=True, nullable=False)
+
+    # one-to-many relationship
+    equipments = relationship("Equipment", back_populates="category_rel")
 
 class Material(Base):
     __tablename__ = "materials"
@@ -525,7 +549,9 @@ class JobPhase(Base):
     contract_no = Column(String)
     job_description = Column(String)
     project_engineer = Column(String)
-    jurisdiction = Column(String)
+    # jurisdiction = Column(String)
+    location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"))
+    location = relationship("Location", back_populates="job_phases")
     status = Column(String, default="Active")
     assigned_foremen = relationship("ForemanJob", back_populates="job_phase")
 
@@ -694,3 +720,24 @@ class AuditLog(Base):
     details = Column(Text, nullable=True)
 
     user = relationship("User")
+
+
+
+
+class Location(Base):
+    __tablename__ = "locations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+
+    # Backref to job phases
+    job_phases = relationship("JobPhase", back_populates="location")
+
+
+class Supplier(Base):
+    __tablename__ = "supplier"
+    id = Column(Integer, primary_key=True, index=True)
+    concrete_supplier = Column(String, nullable=True)
+    asphalt_supplier = Column(String, nullable=True)
+    aggregate_supplier = Column(String, nullable=True)
+    top_soil_supplier = Column(String, nullable=True)

@@ -20,13 +20,27 @@ from .. import models, schemas
 from ..schemas import EquipmentCreate, EquipmentUpdate, EquipmentInDB
 from ..models import Equipment
 from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.orm import joinedload
+from typing import List
 router = APIRouter(
     prefix="/api/equipment",
     tags=["Equipment"]
 )
-@router.get("/")
+# @router.get("/")
+@router.get("/", response_model=List[schemas.EquipmentInDB])
 def get_equipment(db: Session = Depends(get_db)):
-    return db.query(Equipment).filter(Equipment.status == "Active").all()
+    equipments = (
+        db.query(models.Equipment)
+        .options(
+            joinedload(models.Equipment.category_rel),
+            joinedload(models.Equipment.department_rel)
+        )
+        .filter(models.Equipment.status == "Active")
+        .all()
+    )
+    return equipments
+
+
 # In your FastAPI equipment router file
 @router.put("/equipment/{equipment_id}", response_model=EquipmentInDB)
 def update_equipment(equipment_id: str, equipment: EquipmentUpdate, db: Session = Depends(get_db)):

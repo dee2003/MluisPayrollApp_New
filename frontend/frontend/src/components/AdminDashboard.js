@@ -653,7 +653,7 @@
 
 
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import CrewMappingManager from './CrewMappingManager';
 import "./CrewMapping.css";
@@ -761,7 +761,8 @@ const getIconForSection = (sec) => {
 };
 
 // --- Generic Form Component (Unchanged) ---
-const GenericForm = ({ fields, onSubmit, defaultValues, errorMessage }) => {
+const GenericForm = ({ fields, onSubmit, defaultValues = {}, errorMessage,categories = [] }) => {
+    const [formData, setFormData] = useState(defaultValues);
     const [values, setValues] = useState(() => {
         const initialValues = { ...defaultValues };
         fields.forEach(field => {
@@ -773,6 +774,7 @@ const GenericForm = ({ fields, onSubmit, defaultValues, errorMessage }) => {
     });
     const [errors, setErrors] = useState({});
 
+
     const validateField = (name, value) => {
         let error = "";
         const field = fields.find(f => f.name === name);
@@ -783,22 +785,69 @@ const GenericForm = ({ fields, onSubmit, defaultValues, errorMessage }) => {
         return error;
     };
 
-    const handleChange = e => {
-        const { name, value } = e.target;
-        setValues(prev => ({ ...prev, [name]: value }));
-        validateField(name, value);
-    };
+    // const handleChange = e => {
+    //     const { name, value } = e.target;
+    //     setValues(prev => ({ ...prev, [name]: value }));
+    //     validateField(name, value);
+    // };
+const handleChange = (e) => {
+  if (!e || !e.target) return; // prevent crash
+  const name = e.target.name;
+  const value = e.target.value;
 
-    const handleSubmit = e => {
-        e.preventDefault();
-        let newErrors = {};
-        fields.forEach(f => {
-            const error = validateField(f.name, values[f.name]);
-            if (error) newErrors[f.name] = error;
-        });
-        setErrors(newErrors);
-        if (Object.keys(newErrors).length === 0) onSubmit(values);
-    };
+  // When category number changes
+  if (name === "category_number") {
+    const selectedCategory = categories.find(c => c.number === value);
+    setValues(prev => ({
+      ...prev,
+      category_number: value,
+      category: selectedCategory ? selectedCategory.name : "",
+      category_id: selectedCategory ? selectedCategory.id : null,
+    }));
+  } else {
+    setValues(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  }
+  validateField(name, value);
+};
+
+
+const handleSubmit = e => {
+  e.preventDefault();
+  let newErrors = {};
+  fields.forEach(f => {
+    const error = validateField(f.name, values[f.name]);
+    if (error) newErrors[f.name] = error;
+  });
+  setErrors(newErrors);
+
+  if (Object.keys(newErrors).length === 0) {
+    // Ensure category name is updated correctly before submitting
+    if (values.category_number && !values.category) {
+      const selectedCategory = categories.find(c => c.number === values.category_number);
+      if (selectedCategory) {
+        values.category = selectedCategory.name;
+      }
+    }
+
+    // Add category_id based on category_number for backend
+    if (values.category_number) {
+      const selectedCategory = categories.find(c => c.number === values.category_number);
+      if (selectedCategory) {
+        values.category_id = selectedCategory.id;
+      }
+    }
+    if (!values.id || values.id.trim() === "") {
+      alert("Please enter Equipment ID before submitting.");
+      return;
+    }
+    console.log("Submitting form values:", values);
+    onSubmit(values);
+  }
+};
+
 
     return (
         <form onSubmit={handleSubmit}>
@@ -816,8 +865,10 @@ const GenericForm = ({ fields, onSubmit, defaultValues, errorMessage }) => {
                             name={field.name}
                             className="form-control"
                             value={values[field.name] || ""}
+                            // onChange={(e) => handleChange(e.target.name, e.target.value)}
                             onChange={handleChange}
                             required={field.required}
+                            readOnly={field.readOnly || false} 
                             autoComplete={field.type === "password" ? "new-password" : "off"}
                         />
                     )}
@@ -865,7 +916,14 @@ const JobWithPhasesModal = ({ mode, job, onSave, onClose, showNotification }) =>
     const [phases, setPhases] = useState(job?.phases || []);
     const [editIdx, setEditIdx] = useState(null);
     const fixedPhases = ["Admin", "S&SL", "Vacation"];
+    const [locations, setLocations] = useState([]);
 
+  useEffect(() => {
+    axios.get(`${API_URL}/locations/`)
+      .then((res) => setLocations(res.data))
+      .catch((err) => console.error("Error fetching locations:", err));
+  }, []);
+  
     // ... (Your handleAddPhase, handleEditPhase, handleDeletePhase functions remain the same)
     const handleAddPhase = () => {
       if (!phaseCode.trim()) return showNotification("Please enter a phase code.");
@@ -902,7 +960,7 @@ const JobWithPhasesModal = ({ mode, job, onSave, onClose, showNotification }) =>
             contract_no: contractNo.trim(),
             job_description: jobDescription.trim(),
             project_engineer: projectEngineer.trim(),
-            jurisdiction: jurisdiction.trim(),
+            location_id: jurisdiction ? parseInt(jurisdiction) : null,
             status: status, // This is now guaranteed to be lowercase
             phase_codes: finalPhaseStrings // The key is now 'phase_codes'
         };
@@ -916,7 +974,22 @@ const JobWithPhasesModal = ({ mode, job, onSave, onClose, showNotification }) =>
                 <div className="form-group"><label>Job Code</label><input type="text" value={jobCode} onChange={(e) => setJobCode(e.target.value)} disabled={mode === "edit"} className="form-control" required /></div>
                 <div className="form-group"><label>Contract No.</label><input type="text" value={contractNo} onChange={(e) => setContractNo(e.target.value)} className="form-control" /></div>
                 <div className="form-group"><label>Project Engineer</label><input type="text" value={projectEngineer} onChange={(e) => setProjectEngineer(e.target.value)} className="form-control" /></div>
-                <div className="form-group"><label>Jurisdiction</label><input type="text" value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} className="form-control" /></div>
+                {/* <div className="form-group"><label>Jurisdiction</label><input type="text" value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} className="form-control" /></div> */}
+                <div className="form-group">
+        <label>Jurisdiction</label>
+        <select
+          value={jurisdiction}
+          onChange={(e) => setJurisdiction(e.target.value)}
+          className="form-control"
+        >
+          <option value="">Select Jurisdiction</option>
+          {locations.map((loc) => (
+            <option key={loc.id} value={loc.id}>
+              {loc.name}
+            </option>
+          ))}
+        </select>
+      </div>
                 <div className="form-group full-width"><label>Job Description</label><textarea value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} className="form-control" rows="3"></textarea></div>
                 
                 {/* ✅ FIX: The select now correctly uses lowercase values */}
@@ -1004,6 +1077,74 @@ const AdminDashboard = ({ data: initialData, onLogout }) => {
     const [formError, setFormError] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState(null);
+
+    const [departments, setDepartments] = useState([]);
+const [categories, setCategories] = useState([]);
+const [categoryNumbers, setCategoryNumbers] = useState([]);
+const [selectedCategoryId, setSelectedCategoryId] = useState("");
+const [selectedCategoryNumber, setSelectedCategoryNumber] = useState("");
+const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+
+
+useEffect(() => {
+  axios.get(`${API_URL}/departments/`)
+    .then(res => {
+      console.log("Fetched departments:", res.data);
+      setDepartments(res.data);
+    })
+    .catch(err => console.error("Error fetching departments:", err));
+
+  axios.get(`${API_URL}/categories/`)
+    .then(res => {
+      console.log("Fetched categories:", res.data);
+      setCategories(res.data);
+      // Assuming category numbers are strings
+      const categoryNums = res.data
+        .filter(cat => cat.number && cat.number.trim() !== "")
+        .map(cat => ({ value: cat.number, label: cat.number }));
+      console.log("Parsed category numbers:", categoryNums);
+      setCategoryNumbers(categoryNums);
+    })
+    .catch(err => console.error("Error fetching categories:", err));
+}, []);
+
+
+// const getEquipmentFormFields = () => {
+//   return getFormFields("equipment").map((field) => {
+//     if (field.name === "department") {
+//       return {
+//         ...field,
+//         options: [
+//           { value: "", label: "Select Department" },  // Default placeholder
+//           ...departments.map((d) => ({ value: d.id, label: d.name })),
+//         ],
+//       };
+//     }
+//     if (field.name === "category") {
+//       return {
+//         ...field,
+//         options: [
+//           { value: "", label: "Select Category" },  // Default placeholder
+//           ...categories.map((c) => ({ value: c.id, label: c.name })),
+//         ],
+//       };
+//     }
+//     if (field.name === "category_number") {
+//       return {
+//         ...field,
+//         options: [
+//           { value: "", label: "Select Category Number" },  // Default placeholder
+//           ...categoryNumbers,
+//         ],
+//       };
+//     }
+//     return field;
+//   });
+// };
+
+
+
+
       const [pagination, setPagination] = useState(
     Object.fromEntries(SECTIONS.map((sec) => [sec, 1]))
   );
@@ -1034,6 +1175,7 @@ const AdminDashboard = ({ data: initialData, onLogout }) => {
     const [isResizing, setIsResizing] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [currentDate, setCurrentDate] = useState("");
+    
 
     useEffect(() => {
         const fetchData = async () => {
@@ -1065,6 +1207,9 @@ const AdminDashboard = ({ data: initialData, onLogout }) => {
         fetchData();
     }, []);
 
+useEffect(() => {
+  console.log("Linked Category →", { selectedCategoryId, selectedCategoryNumber });
+}, [selectedCategoryId, selectedCategoryNumber]);
 
 
     useEffect(() => {
@@ -1175,43 +1320,95 @@ catch (error) {
   }
 };
 
-// ✅ Toggle handler that uses lowercase values for backend
-const handleToggleStatus = async (type, item) => {
+
+// const handleToggleStatus = async (type, item, newStatus) => {
+//   const stateKey = typeToStateKey[type];
+//   const updatedItem = { ...item, status: newStatus.toLowerCase() };
+
+//   // Remove nested relational fields before sending
+//   const { category_rel, department_rel, ...cleanPayload } = updatedItem;
+
+//   console.log(`Changing status for ${type} id:${item.id}`, cleanPayload);
+
+//   try {
+//     const response = await axios.put(
+//       `${API_URL}/${stateKey}/${encodeURIComponent(item.id)}`,
+//       cleanPayload
+//     );
+
+//     // Update UI immediately
+//     setData((prev) => ({
+//       ...prev,
+//       [stateKey]: (prev[stateKey] || []).map((it) =>
+//         it.id === item.id ? response.data : it
+//       ),
+//     }));
+//   } catch (error) {
+//     console.error("Error updating status:", error);
+//     alert(
+//       `Error updating status: ${
+//         error.response?.data
+//           ? JSON.stringify(error.response.data)
+//           : "Unexpected error"
+//       }`
+//     );
+//   }
+// };
+
+const handleToggleStatus = async (type, item, newStatus) => {
   const stateKey = typeToStateKey[type];
+   let mappedStatus = newStatus.toLowerCase();
+  if (type === "job_phase") {
+    if (mappedStatus === "complete") mappedStatus = "inactive";
+    else if (mappedStatus === "on_hold") mappedStatus = "on_hold";
+  }
+  const updatedItem = { ...item, status: mappedStatus };
 
+  // Remove nested relational fields before sending
+  const { category_rel, department_rel, ...cleanPayload } = updatedItem;
 
-  // Convert to lowercase for backend
-  const currentStatus = item.status?.toLowerCase();
-  const newStatus = currentStatus === "active" ? "inactive" : "active";
+  // ✅ Map frontend keys to backend endpoints
+  const endpointMap = {
+    job_phases: "job-phases/by-id",
+    employees: "employees",
+    equipment: "equipment",
+    // add others if needed
+  };
+  if (stateKey === "job_phases" && Array.isArray(cleanPayload.phase_codes)) {
+    cleanPayload.phase_codes = cleanPayload.phase_codes.map(
+      (p) => (typeof p === "string" ? p : p.code)
+    );
+  }
+  const endpoint = `${API_URL}/${endpointMap[stateKey] || stateKey}/${encodeURIComponent(item.id)}`;
 
-  const updatedItem = { ...item, status: newStatus.toLowerCase() }; // send "inactive" or "active"
+  console.log(`Changing status for ${type} id:${item.id}`, cleanPayload);
 
   try {
-    const response = await axios.put(
-      `${API_URL}/${stateKey}/${encodeURIComponent(item.id)}`,
-      updatedItem
-    );
+    const response = await axios.put(endpoint, cleanPayload);
 
-    onUpdate(
-      stateKey,
-      (data[stateKey] || []).map(it =>
+    // ✅ Update UI immediately
+    setData((prev) => ({
+      ...prev,
+      [stateKey]: (prev[stateKey] || []).map((it) =>
         it.id === item.id ? response.data : it
-      )
-    );
+      ),
+    }));
   } catch (error) {
-    console.error("Error toggling status:", error);
-    const errorMessage = error.response?.data
-      ? JSON.stringify(error.response.data)
-      : "An unexpected error occurred.";
-    alert(`Error updating status: ${errorMessage}`);
+    console.error("Error updating status:", error);
+    alert(
+      `Error updating status: ${
+        error.response?.data
+          ? JSON.stringify(error.response.data)
+          : "Unexpected error"
+      }`
+    );
   }
 };
-
 
     const handleDeleteItem = async (type, itemId) => {
         const deleteAction = async () => {
             const urlKey = type === 'job_phase' ? 'job-phases' : typeToStateKey[type];
-            const dataKey = type === 'job_phase' ? 'job_phases' : typeToStateKey[type];
+            const dataKey = type === 'job_phase' ? 'job-phases' : typeToStateKey[type];
             try {
                 const url = `${API_URL}/${urlKey}/${encodeURIComponent(itemId)}`;
                 await axios.delete(url);
@@ -1225,7 +1422,7 @@ const handleToggleStatus = async (type, item) => {
         const itemLabel = type.replace('_', ' ');
         showConfirmation(`Are you sure you want to delete this ${itemLabel}?`, deleteAction);
     };
-
+    
     const getFormFields = (type) => {
         switch (type) {
             case "user": return [ { name: "username", label: "Username", required: true }, { name: "first_name", label: "First Name", required: true }, { name: "middle_name", label: "Middle Name" }, { name: "last_name", label: "Last Name", required: true }, { name: "email", label: "Email", required: true, type: "email" }, { name: "password", label: "Password", type: "password", required: true }, { name: "role", label: "Role", type: "select", options: [ { value: "foreman", label: "Foreman" }, { value: "supervisor", label: "Supervisor" }, { value: "project_engineer", label: "Project Engineer" }, { value: "admin", label: "Accountant" } ], required: true, defaultValue: "admin" } ];
@@ -1234,17 +1431,132 @@ const handleToggleStatus = async (type, item) => {
             return [
                 { name: "id", label: "Equipment ID", required: true },
                 { name: "name", label: "Equipment Name", required: true },
-                { name: "category", label: "Category Name" }, // Changed from "type" to "category"
-                { name: "department", label: "Department", required: true },
-                { name: "category_number", label: "Category Number", required: true },
+                // { name: "category", label: "Category Name" }, // Changed from "type" to "category"
+                          
+                // { name: "department", label: "Department", required: true },
+                // { name: "category_number", label: "Category Number", required: true },
+                 {
+  name: "category_number",
+  label: "Category Number",
+  type: "select",
+  options: categoryNumbers, // list of numbers as value/label
+  required: true,
+},
+        {
+      name: "category",
+      label: "Category Name",
+      type: "text",   // ✅ changed from "select" to "text
+      readOnly: true, // ✅ add this
+    },
+        // Dropdown for department
+        { 
+            name: "department_id", 
+            label: "Department", 
+            type: "select", 
+            options: [],  // will be filled dynamically
+            required: true 
+        },
                 { name: "vin_number", label: "VIN Number" },
                 { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" }
-            ];            case "vendor": return [ { name: "name", label: "Work Performed Name", required: true }, { name: "unit", label: "Unit", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
+            ];            
+            case "vendor": return [ { name: "name", label: "Work Performed Name", required: true }, { name: "unit", label: "Unit", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
             case "material": return [ { name: "name", label: "Material/Trucking Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
             case "dumping_site": return [ { name: "id", label: "Site ID", required: true }, { name: "name", label: "Site Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
             default: return [];
         }
     };
+
+// const getEquipmentFormFields = () => {
+//   return getFormFields("equipment").map((field) => {
+//     if (field.name === "department") {
+//       return {
+//         ...field,
+//         options: [
+//           { value: "", label: "Select Department" },  // Default placeholder
+//           ...departments.map((d) => ({ value: d.id, label: d.name })),
+//         ],
+//       };
+//     }
+//     if (field.name === "category") {
+//       return {
+//         ...field,
+//         options: [
+//           { value: "", label: "Select Category" },  // Default placeholder
+//           ...categories.map((c) => ({ value: c.id, label: c.name })),
+//         ],
+//       };
+//     }
+//     if (field.name === "category_number") {
+//       return {
+//         ...field,
+//         options: [
+//           { value: "", label: "Select Category Number" },  // Default placeholder
+//           ...categoryNumbers,
+//         ],
+//       };
+//     }
+//     return field;
+//   });
+// };
+const getEquipmentFormFields = () => {
+  return getFormFields("equipment").map((field) => {
+    if (field.name === "department_id") {
+      return {
+        ...field,
+        options: [
+          { value: "", label: "Select Department" },
+          ...departments.map((d) => ({ value: d.id, label: d.name })),
+        ],
+        value: selectedDepartmentId,
+        onChange: (e) => setSelectedDepartmentId(e.target.value),
+      };
+    }
+
+    if (field.name === "category") {
+      return {
+        ...field,
+        type: "text",
+        options: [
+          { value: "", label: "Select Category" },
+          ...categories.map((c) => ({ value: c.id, label: c.name })),
+        ],
+        value: selectedCategoryId,
+        onChange: (e) => {
+          const selectedId = e.target.value;
+          setSelectedCategoryId(selectedId);
+
+          const selectedCat = categories.find((c) => c.id === parseInt(selectedId));
+          setSelectedCategoryNumber(selectedCat ? selectedCat.number : "");
+        },
+      };
+    }
+
+    if (field.name === "category_number") {
+  return {
+    ...field,
+    type: "select",
+    options: [
+      { value: "", label: "Select Category Number" },
+      ...categories.map((c) => ({ value: c.number, label: c.number })),
+    ],
+  };
+}
+
+
+
+    return field;
+  });
+};
+const equipmentFields = useMemo(() => getEquipmentFormFields(), [
+  departments,
+  categories,
+  categoryNumbers,
+  selectedCategoryId,
+  selectedCategoryNumber,
+  selectedDepartmentId,
+]);
+// const equipmentFields = useMemo(() => getEquipmentFormFields(), [departments, categories, categoryNumbers]);
+
 
 // In AdminDashboard.js
 
@@ -1328,7 +1640,18 @@ const prepareJobForEditModal = (job) => {
                         <td key={e.id}>{e.id}</td> 
                         <td key={fullName}>{fullName}</td> 
                         <td key={e.class_1}>{`${e.class_1 || ""}${e.class_2 ? " / " + e.class_2 : ""}`}</td> 
-                        <td key={e.status}>{capitalizeFirstLetter(e.status)}</td>
+                        {/* <td key={e.status}>{capitalizeFirstLetter(e.status)}</td> */}
+                        <td>
+  {(() => {
+    const statusMap = {
+      active: "Active",
+      inactive: "Inactive",
+      maintenance: "In Maintenance",
+      on_leave: "On Leave",
+    };
+    return statusMap[e.status?.toLowerCase()] || e.status;
+  })()}
+</td>
 
                     </>);
                 });
@@ -1339,17 +1662,34 @@ case "equipment":
         "equipment", 
         "Equipment Management", 
         ["ID", "Name", "Category Name", "Department", "Category No.", "VIN No.", "Status"], 
-        e => (<> 
-            <td key={e.id}>{e.id}</td> 
-            <td key={e.name}>{e.name}</td> 
-            <td key={e.category}>{e.category}</td> {/* <--- CORRECTED */}
-            <td key={e.department}>{e.department}</td> 
-            <td key={e.category_number}>{e.category_number}</td> 
-            <td key={e.vin_number}>{e.vin_number}</td> 
-            <td key={e.status}>{capitalizeFirstLetter(e.status)}</td>
+        e => {
+            console.log("Equipment row", e.category_rel, e.department_rel);
+            return (
+                <> 
+                    <td key={e.id}>{e.id}</td>
+                    <td key={e.name}>{e.name}</td>
+                    <td>{e.category_rel?.name || "N/A"}</td>
+                    <td>{e.department_rel?.name || "N/A"}</td>
+                    <td>{e.category_rel?.number || "N/A"}</td>
+                    <td key={e.vin_number}>{e.vin_number}</td>
+                    {/* <td key={e.status}>{capitalizeFirstLetter(e.status)}</td> */}
+                    <td>
+  {(() => {
+    const statusMap = {
+      active: "Active",
+      inactive: "Inactive",
+      maintenance: "In Maintenance",
+      on_leave: "On Leave",
+    };
+    return statusMap[e.status?.toLowerCase()] || e.status;
+  })()}
+</td>
 
-        </>)
+                </>
+            );
+        }
     );
+
 
 
 
@@ -1364,7 +1704,17 @@ case "equipment":
                             title="Jobs & Phases Management" 
                             headers={["Job Code", "Description", "Project Engineer", "Status"]} 
                             data={data.job_phases || []} 
-                            renderRow={job => (<> <td>{job.job_code}</td> <td>{job.job_description}</td> <td>{job.project_engineer}</td> <td>{capitalizeFirstLetter(job.status)}</td>
+                            renderRow={job => (<> <td>{job.job_code}</td> <td>{job.job_description}</td> <td>{job.project_engineer}</td> <td>
+  {(() => {
+    const statusMap = {
+      active: "Active",
+      inactive: "Complete",
+      on_hold: "On Hold",
+    //   complete: "Complete",
+    };
+    return statusMap[job.status?.toLowerCase()] || job.status;
+  })()}
+</td>
  </>)} 
                             onAdd={() => setJobModal({ shown: true, mode: "add", job: null })} 
                             onEdit={(job) => setJobModal({ shown: true, mode: "edit", job: prepareJobForEditModal(job) })} 
@@ -1393,15 +1743,23 @@ case "equipment":
             {confirmation.shown && <ConfirmationModal message={confirmation.message} onConfirm={confirmation.onConfirm} onCancel={() => setConfirmation({ shown: false, message: "", onConfirm: () => {} })} />}
 
             {modal.shown && (
-                <Modal title={modal.title} onClose={closeMainModal}>
-                    <GenericForm
-                        fields={getFormFields(modal.type)}
-                        defaultValues={modal.item || {}}
-                        onSubmit={(formData) => handleAddOrUpdateItem(modal.type, formData, modal.mode, modal.item)}
-                        errorMessage={formError}
-                    />
-                </Modal>
-            )}
+  <Modal title={modal.title} onClose={closeMainModal}>
+  <GenericForm
+    fields={
+      modal.type === "equipment"
+        ? getEquipmentFormFields()  // ✅ Use this for equipment
+        : getFormFields(modal.type) // ✅ Use normal form for others
+    }
+    categories={categories} 
+    defaultValues={modal.item || {}}
+    onSubmit={(formData) =>
+      handleAddOrUpdateItem(modal.type, formData, modal.mode, modal.item)
+    }
+    errorMessage={formError}
+  />
+</Modal>
+
+)}
 
             {viewPhasesJob && <JobPhasesViewModal job={viewPhasesJob} onClose={() => setViewPhasesJob(null)} />}
             {jobModal.shown && <JobWithPhasesModal mode={jobModal.mode} job={jobModal.job} onSave={handleSaveJob} onClose={() => setJobModal({ shown: false, mode: "", job: null })} showNotification={showNotification} />}
@@ -1484,6 +1842,18 @@ case "equipment":
     );
 };
 
+const getStatusOptions = (type) => {
+  switch (type) {
+    case "employee":
+      return ["active", "on_leave", "inactive"];
+    case "equipment":
+      return ["active", "maintenance", "inactive"];
+    case "job_phase":
+      return ["active", "on_hold", "complete"];
+    default:
+      return ["active", "inactive"];
+  }
+};
 
 // ✅ FIX: Added handleToggleStatus and activeSection to props
 const DataTableSection = ({ title, headers, data = [], renderRow, onDelete, onAdd, onEdit, extraActions, handleToggleStatus, activeSection }) => (
@@ -1496,24 +1866,87 @@ const DataTableSection = ({ title, headers, data = [], renderRow, onDelete, onAd
                     <tr key={item.id || item.job_code || item.username}>
                         {renderRow(item)}
                         <td>
-                            {onEdit && <button onClick={() => onEdit(item)} className="btn-edit btn-sm">Edit</button>}
-                            {item.status && handleToggleStatus && ( // Check if handleToggleStatus is passed
-                                <button
-    onClick={() => handleToggleStatus(activeSection, item)}
-    // Update button style for status
-    className={`btn-sm ${item.status.toLowerCase() === "active" ? "btn-outline-danger" : "btn-outline-success"}`}
-    style={{
-      backgroundColor: item.status.toLowerCase() === "inactive" ? "#3889d0ff" : "#ea5362ff", // grey for inactive, red for active
-      color: "#fff",
-      border: 'none',
-      marginRight: 5
-    }}
-  >
-    {item.status.toLowerCase() === "active" ? "Deactivate" : "Activate"}
-  </button>
-                            )}
-                            {extraActions && extraActions(item)}
-                        </td>
+    {onEdit && <button onClick={() => onEdit(item)} className="btn-edit btn-sm">Edit</button>}
+    {item.status && handleToggleStatus && (
+        <>
+            {console.log("Status dropdown type:", activeSection)} 
+            <select
+                value={
+  item.status?.toLowerCase() === "inactive" && activeSection === "job_phase"
+    ? "complete" // 👈 display Complete when backend sends inactive
+    : item.status?.toLowerCase() || "active"
+}
+
+                onChange={(e) => handleToggleStatus(activeSection, item, e.target.value)}
+                className="btn-sm" 
+                style={{
+                    // --- MODERN STYLING ENHANCEMENTS ---
+                    appearance: 'none',
+                    
+                    // LIGHT, STANDARD DYNAMIC COLOR LOGIC
+                    backgroundColor: 
+                        item.status?.toLowerCase() === "inactive"
+                            ? "#e2e3e5" // Light Grey for Inactive
+                            : item.status?.toLowerCase() === "on_leave" ||
+                              item.status?.toLowerCase() === "maintenance"
+                            ? "#fff3cd" // Light Yellow for Mid-States
+                            : "#d4edda", // Light Green for Active
+                    
+                    color: 
+                        item.status?.toLowerCase() === "inactive"
+                            ? "#383d41" 
+                            : item.status?.toLowerCase() === "on_leave" ||
+                              item.status?.toLowerCase() === "maintenance"
+                            ? "#856404"
+                            : "#155724", // Contrasting dark text for high readability on light backgrounds
+
+                    // Box & Border (Kept sleek and defined)
+                    border: "1px solid #c3c3c3", // Neutral light border
+                    borderRadius: "6px", 
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)", // Very subtle shadow
+                    
+                    // Spacing and Alignment
+                    padding: "6px 6px", 
+                    marginRight: "4px",
+                    cursor: "pointer",
+                    outline: 'none', 
+                    transition: 'all 0.2s ease-in-out', 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    textAlign: 'center',
+                    // minWidth: '150px' 
+                }}
+            >
+                {getStatusOptions(activeSection).map((status) => {
+                    const statusKey = status.toLowerCase();
+                    const formattedLabel = {
+                        active: "Active",
+                        inactive: "Inactive",
+                        maintenance: "In Maintenance",
+                        on_leave: "On Leave",
+                        on_hold: "On Hold",
+                        complete: "Complete",
+                    }[statusKey] || status;
+
+                    // Option styling: pure white background for list readability
+                    return (
+                        <option 
+                            key={status} 
+                            value={status}
+                            style={{
+                                backgroundColor: '#ffffff',
+                                color: '#212529',
+                                fontSize: '14px', 
+                            }}
+                        >
+                            {formattedLabel}
+                        </option>
+                    );
+                })}
+            </select>
+        </>
+    )}
+</td>
                     </tr>
                 ))}
             </tbody>

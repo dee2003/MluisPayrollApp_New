@@ -305,6 +305,7 @@ from .crud import create_crud_router
 from .routers import timesheet, tickets, review, equipment, submissions, project_engineer
 from .ocr import ocr_main
 
+from .routers.dropdowns import router as dropdowns_router
 # -------------------------------
 # Database: Create all tables
 # -------------------------------
@@ -357,7 +358,7 @@ def create_job_phase(job_phase: schemas.JobPhaseCreate, db: Session = Depends(da
         contract_no=job_phase.contract_no,
         job_description=job_phase.job_description,
         project_engineer=job_phase.project_engineer,
-        jurisdiction=job_phase.jurisdiction,
+        location_id=job_phase.location_id, 
         status=job_phase.status
     )
 
@@ -424,14 +425,58 @@ def update_job_phase(job_code: str, job_update: schemas.JobPhaseUpdate, db: Sess
     
     return db_job
 
+@job_phase_router.put("/by-id/{job_id}", response_model=schemas.JobPhase)
+def update_job_phase_by_id(job_id: int, job_update: schemas.JobPhaseUpdate, db: Session = Depends(database.get_db)):
+    db_job = db.query(models.JobPhase).options(selectinload(models.JobPhase.phase_codes)).filter(models.JobPhase.id == job_id).first()
+    
+    if not db_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    update_data = job_update.dict(exclude_unset=True)
+
+    # Handle phase_codes properly
+    if "phase_codes" in update_data:
+        new_phase_codes = update_data.pop("phase_codes")
+        db_job.phase_codes.clear()
+        for code_str in new_phase_codes:
+            db_job.phase_codes.append(models.PhaseCode(code=code_str, description=f"Phase {code_str}", unit="unit"))
+
+    # Update other fields
+    for key, value in update_data.items():
+        setattr(db_job, key, value)
+
+    db.commit()
+    db.refresh(db_job)
+    return db_job
+
+
+
+# @job_phase_router.get("/", response_model=List[schemas.JobPhase])
+# def get_all_job_phases(db: Session = Depends(database.get_db)):
+#     # Use .options(selectinload(...)) to eagerly load the relationship data.
+#     return db.query(models.JobPhase).options(
+#         selectinload(models.JobPhase.phase_codes)
+#     ).all()
 
 @job_phase_router.get("/", response_model=List[schemas.JobPhase])
 def get_all_job_phases(db: Session = Depends(database.get_db)):
-    # Use .options(selectinload(...)) to eagerly load the relationship data.
-    return db.query(models.JobPhase).options(
-        selectinload(models.JobPhase.phase_codes)
-    ).all()
-
+    return (
+        db.query(models.JobPhase)
+        .options(selectinload(models.JobPhase.phase_codes))
+        .filter(models.JobPhase.status != models.ResourceStatus.INACTIVE)
+        .all()
+    )
+@job_phase_router.get("/active", response_model=List[schemas.JobPhase])
+def get_active_job_phases(db: Session = Depends(database.get_db)):
+    """
+    Fetch only active job phases (used in timesheet creation).
+    """
+    return (
+        db.query(models.JobPhase)
+        .options(selectinload(models.JobPhase.phase_codes))
+        .filter(models.JobPhase.status == models.ResourceStatus.ACTIVE)
+        .all()
+    )
 
 @job_phase_router.get("/{job_code}", response_model=schemas.JobPhase)
 def get_job_phases(job_code: str, db: Session = Depends(database.get_db)):
@@ -648,7 +693,8 @@ app.include_router(tickets.router)
 app.include_router(review.router)
 app.include_router(project_engineer.router)
 app.include_router(ocr_main.router)
-
+app.include_router(dropdowns_router)
+# ... other routers
 # -------------------------------
 # Auth Router
 # -------------------------------
@@ -679,4 +725,8 @@ def get_all_data(db: Session = Depends(database.get_db)):
         "vendors": db.query(models.Vendor).all(),
         "dumping_sites": db.query(models.DumpingSite).all(),
     }
+
+
+
+
 
