@@ -317,6 +317,7 @@ class SubmissionStatus(str, enum.Enum):
     # It's also good practice to include the 'draft' status
     # that your endpoint can use as a default.
     DRAFT = "draft" 
+    SENT = "Sent"          # 👈 add this line
 
 
 class AuditAction(str, enum.Enum):
@@ -400,7 +401,9 @@ class User(Base):
         "CrewMapping", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
     )
     assigned_jobs = relationship("ForemanJob", back_populates="foreman", cascade="all, delete-orphan")
-
+    foreman_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.foreman_id]")
+    supervisor_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.supervisor_id]")
+    engineer_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.engineer_id]")
 
 class Employee(Base):
     __tablename__ = "employees"
@@ -468,79 +471,6 @@ class DumpingSite(Base):
     name = Column(String, nullable=False, unique=True)
     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
 
-# # ============================================================================== #
-# # 5. NORMALIZED MODELS AND WORKFLOWS
-# # ============================================================================== #
-
-# class JobPhase(Base):
-#     __tablename__ = "job_phases"
-#     id = Column(Integer, primary_key=True, index=True)
-#     job_code = Column(String, unique=True, index=True, nullable=False)
-#     contract_no = Column(String, nullable=False)
-#     job_description = Column(String, nullable=True)
-#     project_engineer = Column(String, nullable=True)
-#     jurisdiction = Column(String, nullable=True)
-#     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
-
-#     # Relationships
-#     phase_codes = relationship("PhaseCode", back_populates="job_phase", cascade="all, delete-orphan")
-#     assigned_foremen = relationship("ForemanJob", back_populates="job_phase", cascade="all, delete-orphan")
-
-
-# class PhaseCode(Base):
-#     __tablename__ = "phase_codes"
-#     id = Column(Integer, primary_key=True)
-#     code = Column(String, nullable=False)
-#     description = Column(String, nullable=False)
-#     unit = Column(String)
-#     job_phase_id = Column(Integer, ForeignKey("job_phases.id", ondelete="CASCADE"), nullable=False, index=True)
-
-#     job_phase = relationship("JobPhase", back_populates="phase_codes")
-
-
-# class CrewMapping(Base, SoftDeleteMixin):
-#     __tablename__ = "crew_mapping"
-#     id = Column(Integer, primary_key=True, index=True)
-#     foreman_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
-
-#     # Many-to-many relationships
-#     employees = relationship("Employee", secondary=crew_employee_association)
-#     equipment = relationship("Equipment", secondary=crew_equipment_association)
-#     materials = relationship("Material", secondary=crew_material_association)
-#     vendors = relationship("Vendor", secondary=crew_vendor_association)
-#     dumping_sites = relationship("DumpingSite", secondary=crew_dumping_site_association)
-
-#     foreman = relationship("User", back_populates="crew_mappings")
-
-# ============================================================================== #
-# 5. NORMALIZED MODELS AND WORKFLOWS
-# ============================================================================== #
-
-# class JobPhase(Base):
-#     __tablename__ = "job_phases"
-#     id = Column(Integer, primary_key=True, index=True)
-#     job_code = Column(String, unique=True, index=True, nullable=False)
-#     contract_no = Column(String, nullable=False)
-#     job_description = Column(String, nullable=True)
-#     project_engineer = Column(String, nullable=True)
-#     jurisdiction = Column(String, nullable=True)
-#     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
-
-#     # Relationships
-#     phase_codes = relationship("PhaseCode", back_populates="job_phase", cascade="all, delete-orphan")
-#     assigned_foremen = relationship("ForemanJob", back_populates="job_phase", cascade="all, delete-orphan")
-
-
-# class PhaseCode(Base):
-#     __tablename__ = "phase_codes"
-#     id = Column(Integer, primary_key=True)
-#     code = Column(String, nullable=False)
-#     description = Column(String, nullable=False)
-#     unit = Column(String)
-#     job_phase_id = Column(Integer, ForeignKey("job_phases.id", ondelete="CASCADE"), nullable=False, index=True)
-
-#     job_phase = relationship("JobPhase", back_populates="phase_codes")
-
 class JobPhase(Base):
     __tablename__ = "job_phases"
 
@@ -554,6 +484,7 @@ class JobPhase(Base):
     location = relationship("Location", back_populates="job_phases")
     status = Column(String, default="Active")
     assigned_foremen = relationship("ForemanJob", back_populates="job_phase")
+    project_engineer_id = Column(Integer, ForeignKey("users.id"))
 
     # ✅ Correct relationship (MUST have cascade)
     phase_codes = relationship(
@@ -575,6 +506,7 @@ class PhaseCode(Base):
     # ✅ Foreign key linking to JobPhase
     job_phase_id = Column(Integer, ForeignKey("job_phases.id"))
     job_phase = relationship("JobPhase", back_populates="phase_codes")
+    tickets = relationship("Ticket", back_populates="phase_code")  # NEW
 
 class CrewMapping(Base, SoftDeleteMixin):
     __tablename__ = "crew_mapping"
@@ -644,46 +576,113 @@ class Timesheet(Base):
     sent_date = Column(DateTime(timezone=True), server_default=func.now())  # 👈 auto set when created
     timesheet_name = Column(String, nullable=True)
     data = Column(JSONB, nullable=True)
-
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     foreman = relationship("User", back_populates="timesheets")
     job_phase = relationship("JobPhase")
     files = relationship("TimesheetFile", back_populates="timesheet", cascade="all, delete-orphan")
-    entries = relationship(
-        "TimesheetEntry", back_populates="timesheet", cascade="all, delete-orphan", passive_deletes=True
+    tickets = relationship("Ticket", back_populates="timesheet")
+
+
+    workflow_entries = relationship(
+        "TimesheetWorkflow",
+        back_populates="timesheet",
+        cascade="all, delete-orphan"
+    )
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "date": str(self.date),
+            "status": self.status,
+            "foreman_id": self.foreman_id,
+            "foreman_name": f"{self.foreman.first_name} {self.foreman.last_name}" if self.foreman else None,
+            "job_phase_id": self.job_phase_id,
+            "job_code": self.job_phase.job_code if self.job_phase else None,
+            "phase_name": self.job_phase.phase_name if self.job_phase else None
+        }
+
+class TimesheetWorkflow(Base):
+    __tablename__ = "timesheet_workflows"
+
+    id = Column(Integer, primary_key=True, index=True)
+    timesheet_id = Column(Integer, ForeignKey("timesheets.id"))
+
+    foreman_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    supervisor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    engineer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    by_role = Column(String, nullable=False)
+
+    action = Column(String(50))  # sent, approved, rejected
+    comments = Column(Text, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+    timesheet = relationship("Timesheet", back_populates="workflow_entries")
+
+    foreman = relationship(
+        "User",
+        foreign_keys=[foreman_id],
+        back_populates="foreman_workflows",
+        overlaps="foreman_workflows"
+    )
+    supervisor = relationship(
+        "User",
+        foreign_keys=[supervisor_id],
+        back_populates="supervisor_workflows",
+        overlaps="supervisor_workflows"
+    )
+    engineer = relationship(
+        "User",
+        foreign_keys=[engineer_id],
+        back_populates="engineer_workflows",
+        overlaps="engineer_workflows"
     )
 
+# class TimesheetEntry(Base):
+#     __tablename__ = "timesheet_entries"
+#     id = Column(Integer, primary_key=True, index=True)
+#     timesheet_id = Column(Integer, ForeignKey("timesheets.id", ondelete="CASCADE"), nullable=False, index=True)
+#     employee_id = Column(String, ForeignKey("employees.id"), nullable=True, index=True)
+#     equipment_id = Column(String, ForeignKey("equipment.id"), nullable=True, index=True)
+#     phase_code_id = Column(Integer, ForeignKey("phase_codes.id"), nullable=False, index=True)
 
-class TimesheetEntry(Base):
-    __tablename__ = "timesheet_entries"
-    id = Column(Integer, primary_key=True, index=True)
-    timesheet_id = Column(Integer, ForeignKey("timesheets.id", ondelete="CASCADE"), nullable=False, index=True)
-    employee_id = Column(String, ForeignKey("employees.id"), nullable=True, index=True)
-    equipment_id = Column(String, ForeignKey("equipment.id"), nullable=True, index=True)
-    phase_code_id = Column(Integer, ForeignKey("phase_codes.id"), nullable=False, index=True)
+#     hours_worked = Column(Float, nullable=False)
+#     notes = Column(Text, nullable=True)
 
-    hours_worked = Column(Float, nullable=False)
-    notes = Column(Text, nullable=True)
-
-    timesheet = relationship("Timesheet", back_populates="entries")
-    employee = relationship("Employee")
-    equipment = relationship("Equipment")
-    phase_code = relationship("PhaseCode")
+#     timesheet = relationship("Timesheet", back_populates="entries")
+#     employee = relationship("Employee")
+#     equipment = relationship("Equipment")
+#     phase_code = relationship("PhaseCode")
 
 
 class Ticket(Base):
     __tablename__ = "tickets"
+
     id = Column(Integer, primary_key=True, index=True)
     foreman_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     job_phase_id = Column(Integer, ForeignKey("job_phases.id"), nullable=False, index=True)
+    timesheet_id = Column(Integer, ForeignKey("timesheets.id"))  # 👈 Add this
+    phase_code_id = Column(Integer, ForeignKey("phase_codes.id"), nullable=True)  # ✅ NEW COLUMN
 
     image_path = Column(String, nullable=False)
     extracted_text = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now())
     status = Column(SQLAlchemyEnum(SubmissionStatus), default=SubmissionStatus.PENDING, nullable=False)
 
+    # Relationships
     foreman = relationship("User", back_populates="tickets")
     job_phase = relationship("JobPhase")
+    timesheet = relationship("Timesheet", back_populates="tickets")
+    phase_code = relationship("PhaseCode", back_populates="tickets")  # ✅ add this line
 
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "date": str(self.date),
+            "status": self.status,
+            "foreman_name": f"{self.foreman.first_name} {self.foreman.last_name}" if self.foreman else None,
+            "job_code": self.job_phase.job_code if self.job_phase else None,
+            "phase_name": self.job_phase.phase_name if self.job_phase else None
+        }
 
 class TimesheetFile(Base):
     __tablename__ = "timesheet_files"
@@ -691,6 +690,7 @@ class TimesheetFile(Base):
     timesheet_id = Column(Integer, ForeignKey("timesheets.id", ondelete="CASCADE"), nullable=False, index=True)
     file_path = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    foreman_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # 👈 added this line
 
     timesheet = relationship("Timesheet", back_populates="files")
 
@@ -703,6 +703,7 @@ class ForemanJob(Base):
 
     foreman = relationship("User", back_populates="assigned_jobs")
     job_phase = relationship("JobPhase", back_populates="assigned_foremen")
+
 
 # ============================================================================== #
 # 7. GENERIC AUDIT LOG TABLE
@@ -741,3 +742,10 @@ class Supplier(Base):
     asphalt_supplier = Column(String, nullable=True)
     aggregate_supplier = Column(String, nullable=True)
     top_soil_supplier = Column(String, nullable=True)
+class SupervisorSubmission(Base):
+    __tablename__ = "supervisor_submissions"
+    id = Column(Integer, primary_key=True, index=True)
+    supervisor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    date = Column(Date, nullable=False)
+    status = Column(String, default="SubmittedToEngineer")
+    submitted_at = Column(DateTime, default=datetime.utcnow)

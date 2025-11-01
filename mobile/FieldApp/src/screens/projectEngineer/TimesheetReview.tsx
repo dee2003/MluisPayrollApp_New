@@ -48,6 +48,8 @@ const PETimesheetReviewScreen = () => {
 
     const [timesheet, setTimesheet] = useState<Timesheet | null>(null);
     const [foremanName, setForemanName] = useState<string>('');
+    const [supervisorName, setSupervisorName] = useState<string>('N/A');
+
     const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -73,6 +75,25 @@ const PETimesheetReviewScreen = () => {
                 const response = await apiClient.get<Timesheet>(`/api/timesheets/${timesheetId}`);
                 const tsData = response.data;
                 setTimesheet(tsData);
+// 🧩 Fetch supervisor submission info for this timesheet's date
+try {
+  const subRes = await apiClient.get(`/api/review/supervisor_submissions/by-date`, {
+    params: { date: tsData.date },
+  });
+
+
+  if (subRes.data && subRes.data.supervisor_id) {
+    // fetch supervisor user info
+    const supRes = await apiClient.get(`/api/users/${subRes.data.supervisor_id}`);
+    const sup = supRes.data;
+    setSupervisorName(`${sup.first_name} ${sup.last_name}`.trim());
+  } else {
+    setSupervisorName('Not yet submitted');
+  }
+} catch (err) {
+  console.warn('Supervisor submission fetch failed', err);
+  setSupervisorName('Not found');
+}
 
 
                 if (tsData.data.job.phase_codes?.length > 0) {
@@ -537,11 +558,17 @@ const PETimesheetReviewScreen = () => {
                     <View style={styles.infoGrid}>
                         <View style={styles.infoItem}><Text style={styles.infoLabel}>Date</Text><Text style={styles.infoValue}>{new Date(date).toLocaleDateString()}</Text></View>
                         <View style={styles.infoItem}><Text style={styles.infoLabel}>Foreman</Text><Text style={styles.infoValue}>{foremanName}</Text></View>
+
                         <View style={styles.infoItem}><Text style={styles.infoLabel}>Project Engineer</Text><Text style={styles.infoValue}>{data.project_engineer || 'N/A'}</Text></View>
                         <View style={styles.infoItem}><Text style={styles.infoLabel}>Day/Night</Text><Text style={styles.infoValue}>{data.time_of_day || 'N/A'}</Text></View>
                         <View style={styles.infoItem}><Text style={styles.infoLabel}>Location</Text><Text style={styles.infoValue}>{data.location || 'N/A'}</Text></View>
                         <View style={styles.infoItem}><Text style={styles.infoLabel}>Weather</Text><Text style={styles.infoValue}>{data.weather || 'N/A'}</Text></View>
                         <View style={styles.infoItemFull}><Text style={styles.infoLabel}>Temperature</Text><Text style={styles.infoValue}>{data.temperature || 'N/A'}</Text></View>
+                                                <View style={styles.infoItem}>
+  <Text style={styles.infoLabel}>Approved By</Text>
+  <Text style={styles.infoValue}>{supervisorName}</Text>
+</View>
+
                     </View>
                 </View>
 

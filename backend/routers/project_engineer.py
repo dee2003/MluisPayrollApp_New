@@ -1,221 +1,126 @@
-# # backend/routers/project_engineer.py
-# from fastapi import APIRouter, Depends, HTTPException, Query
-# from sqlalchemy.orm import Session
-# from sqlalchemy import cast, Date, func
-# from typing import List
-# from datetime import date as date_type
-
-# from .. import models, schemas
-# from ..database import get_db
-
-# router = APIRouter(
-#     prefix="/api/project-engineer",
-#     tags=["ProjectEngineer"]
-# )
-
-# # Response schema for PE dashboard
-# class SupervisorSubmissionSummary(schemas.BaseModel):
-#     supervisor_id: int
-#     supervisor_name: str
-#     timesheet_count: int
-#     ticket_count: int
-
-# class SubmissionByDate(schemas.BaseModel):
-#     date: str
-#     submissions: List[SupervisorSubmissionSummary]
-
-# @router.get("/submissions", response_model=List[SubmissionByDate])
-# def get_submissions_for_pe(
-#     db: Session = Depends(get_db),
-# ):
-#     """
-#     Returns all submitted data grouped by date.
-#     Each date contains a list of supervisors who submitted data and counts of tickets/timesheets.
-#     Only approved submissions are considered.
-#     """
-#     submissions = db.query(models.DailySubmission).filter(
-#         models.DailySubmission.status == "APPROVED"
-#     ).order_by(models.DailySubmission.date.desc()).all()
-
-#     result = {}
-#     for sub in submissions:
-#         # Skip if no foreman_id (global submission)
-#         if not sub.foreman_id:
-#             continue
-
-#         supervisor = db.query(models.User).filter(models.User.id == sub.foreman_id).first()
-#         if not supervisor:
-#             continue
-
-#         # Count timesheets
-#         timesheet_count = db.query(func.count(models.Timesheet.id)).filter(
-#             models.Timesheet.foreman_id == sub.foreman_id,
-#             models.Timesheet.date == sub.date,
-#             models.Timesheet.sent == True
-#         ).scalar() or 0
-
-#         # Count tickets
-#         ticket_count = db.query(func.count(models.Ticket.id)).filter(
-#             models.Ticket.foreman_id == sub.foreman_id,
-#             cast(models.Ticket.created_at, Date) == sub.date
-#         ).scalar() or 0
-
-#         summary = SupervisorSubmissionSummary(
-#             supervisor_id=supervisor.id,
-#             supervisor_name=f"{supervisor.first_name} {supervisor.last_name}".strip(),
-#             timesheet_count=timesheet_count,
-#             ticket_count=ticket_count
-#         )
-
-#         date_str = sub.date.isoformat()
-#         if date_str not in result:
-#             result[date_str] = []
-
-#         result[date_str].append(summary)
-
-#     # Convert to list
-#     return [SubmissionByDate(date=k, submissions=v) for k, v in result.items()]
-
-
-# # from fastapi import Depends, APIRouter, HTTPException, Query
-# # from sqlalchemy.orm import Session
-# # from sqlalchemy import Date, cast, func
-# # from datetime import date as date_type
-# # from .. import models, schemas
-# # from ..database import get_db
-# # # from app.database import get_db
-# # # from app.dependencies import get_current_user  # assuming you have this
-# # from typing import Optional
-# # from .. dependencies import get_current_user
-# # # from .. import JobPhase, DailySubmission, Timesheet, Ticket, User
-# # from ..models import DailySubmission, Timesheet, Ticket, SubmissionStatus, JobPhase, User
-# # router = APIRouter(prefix="/api/project-engineer", tags=["Project Engineer"])
-
-# # def get_current_user(db: Session = Depends(get_db)):
-# #     # simulate a logged-in project engineer
-# #     user = db.query(models.User).filter(models.User.role == "Project Engineer").first()
-# #     return user
-
-# # @router.get("/submissions", response_model=schemas.SubmissionDataResponse)
-
-# # from datetime import date as date_type
-# # from typing import List, Dict, Any
-
-# # # adjust these relative imports to match your package layout
-
-
-# # @router.get("/submissions", response_model=List[schemas.PENotification])
-# # def get_notifications_for_pe(
-# #     db: Session = Depends(get_db),
-# #     pe_name: str = Query(..., description="Project Engineer username")
-# # ):
-# #     """
-# #     Returns all supervisor submissions for a PE's assigned job codes.
-# #     Includes job code, supervisor name, timesheet count, ticket count, and date.
-# #     """
-
-# #     # 1️⃣ Get job codes under this PE
-# #     job_codes = db.query(models.JobPhase.job_code).filter(models.JobPhase.project_engineer == pe_name).all()
-# #     job_code_list = [jc[0] for jc in job_codes]
-# #     if not job_code_list:
-# #         raise HTTPException(status_code=404, detail="No job codes found for this Project Engineer")
-
-# #     # 2️⃣ Get all DailySubmissions for these job codes
-# #     submissions = db.query(models.DailySubmission).filter(
-# #         models.DailySubmission.job_code.in_(job_code_list)
-# #     ).all()
-
-# #     notifications = []
-
-# #     for sub in submissions:
-# #         supervisor = db.query(models.User).filter(models.User.id == sub.supervisor_id).first()
-# #         if not supervisor:
-# #             continue
-
-# #         # Count timesheets for this submission
-# #         timesheet_count = db.query(func.count(models.Timesheet.id)).filter(
-# #             models.Timesheet.submission_id == sub.id
-# #         ).scalar() or 0
-
-# #         # Count tickets for this submission
-# #         ticket_count = db.query(func.count(models.Ticket.id)).filter(
-# #             models.Ticket.submission_id == sub.id
-# #         ).scalar() or 0
-
-# #         notifications.append(schemas.PENotification(
-# #             id=int(f"{sub.supervisor_id}{sub.date.strftime('%Y%m%d')}"),
-# #             supervisor_id=sub.supervisor_id,
-# #             supervisor_name=f"{supervisor.first_name} {supervisor.last_name}".strip(),
-# #             date=sub.date,
-# #             job_code=sub.job_code,
-# #             timesheet_count=timesheet_count,
-# #             ticket_count=ticket_count
-# #         ))
-
-# #     return notifications
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from typing import List
-from datetime import date as date_type
-
-from .. import models, schemas
-from .. database import get_db
+from sqlalchemy import exists, func
+from datetime import date
+from .. import models, database
 
 router = APIRouter(prefix="/api/project-engineer", tags=["Project Engineer"])
 
-@router.get("/submissions", response_model=List[schemas.PENotification])
-def get_pe_submissions(db: Session = Depends(get_db)):
-    """
-    Returns all supervisor submissions (date wise) with counts for timesheets and tickets.
-    """
+@router.get("/dashboard")
+def get_project_engineer_dashboard(project_engineer_id: int, db: Session = Depends(database.get_db)):
+    print(f"🧩 project_engineer_id = {project_engineer_id}")
 
-    submissions = db.query(models.DailySubmission).all()
+    try:
+        # ✅ Timesheets: include foreman full name and job code
+        timesheets = (
+            db.query(
+                models.Timesheet.id,
+                models.Timesheet.date,
+                models.Timesheet.foreman_id,
+                func.concat_ws(
+                    ' ',
+                    models.User.first_name,
+                    models.User.middle_name,
+                    models.User.last_name
+                ).label("foreman_name"),
+                models.JobPhase.job_code,
+                models.Timesheet.status,
+            )
+            .join(models.JobPhase, models.Timesheet.job_phase_id == models.JobPhase.id)
+            .join(models.User, models.Timesheet.foreman_id == models.User.id)
+            .filter(
+                models.JobPhase.project_engineer_id == project_engineer_id,
+                models.Timesheet.status == "SUBMITTED",
+                exists().where(
+                    (models.SupervisorSubmission.date == models.Timesheet.date)
+                    & (models.SupervisorSubmission.status == "SubmittedToEngineer")
+                ),
+            )
+            .all()
+        )
 
-    if not submissions:
-        raise HTTPException(status_code=404, detail="No submissions found")
+        print(f"✅ Timesheets fetched: {len(timesheets)}")
 
-    notifications = []
-    for sub in submissions:
-        supervisor = db.query(models.User).filter(models.User.id == sub.supervisor_id).first()
-        if not supervisor:
-            continue
+        # ✅ Tickets: include foreman full name, job code, and proper date
+        tickets = (
+            db.query(
+                models.Ticket.id,
+                models.Ticket.foreman_id,
+                func.concat_ws(
+                    ' ',
+                    models.User.first_name,
+                    models.User.middle_name,
+                    models.User.last_name
+                ).label("foreman_name"),
+                models.JobPhase.job_code,
+                models.Ticket.image_path,
+                models.Ticket.status,
+                models.Timesheet.date.label("ts_date"),
+                models.Ticket.created_at,
+            )
+            .join(models.JobPhase, models.Ticket.job_phase_id == models.JobPhase.id)
+            .join(models.User, models.Ticket.foreman_id == models.User.id)
+            .outerjoin(models.Timesheet, models.Ticket.timesheet_id == models.Timesheet.id)
+            .filter(models.JobPhase.project_engineer_id == project_engineer_id)
+            .filter(models.Timesheet.status == "SUBMITTED")
+            .all()
+        )
 
-        timesheet_count = db.query(func.count(models.Timesheet.id)).filter(
-            models.Timesheet.submission_id == sub.id
-        ).scalar() or 0
+        # ✅ Format tickets properly
+        tickets_data = []
+        for tk in tickets:
+            ticket_date = tk.ts_date or (tk.created_at.date() if tk.created_at else None)
+            tickets_data.append({
+                "id": tk.id,
+                "foreman_id": tk.foreman_id,
+                "foreman_name": tk.foreman_name.strip() if tk.foreman_name else "",
+                "job_code": tk.job_code,
+                "image_path": tk.image_path,
+                "status": tk.status,
+                "date": str(ticket_date) if ticket_date else "Invalid Date",
+            })
 
-        ticket_count = db.query(func.count(models.Ticket.id)).filter(
-            models.Ticket.submission_id == sub.id
-        ).scalar() or 0
+        # ✅ Format timesheets properly
+        timesheet_data = [
+            {
+                "id": ts.id,
+                "date": str(ts.date),
+                "foreman_id": ts.foreman_id,
+                "foreman_name": ts.foreman_name.strip() if ts.foreman_name else "",
+                "job_code": ts.job_code,
+                "status": ts.status,
+            }
+            for ts in timesheets
+        ]
 
-        notifications.append(schemas.PENotification(
-            id=int(f"{sub.supervisor_id}{sub.date.strftime('%Y%m%d')}"),
-            supervisor_id=sub.supervisor_id,
-            supervisor_name=f"{supervisor.first_name} {supervisor.last_name}".strip(),
-            date=sub.date,
-            job_code=sub.job_code,
-            timesheet_count=timesheet_count,
-            ticket_count=ticket_count
-        ))
+        print(f"✅ Tickets fetched: {len(tickets_data)}")
 
-    return notifications
+        return {
+            "timesheets": timesheet_data,
+            "tickets": tickets_data,
+        }
+
+    except Exception as e:
+        print(f"🔥 ERROR in /dashboard: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/pe/timesheets")
+def get_timesheet_for_pe_review(
+    foreman_id: int,
+    date: date,
+    db: Session = Depends(database.get_db),
+):
+    timesheet = (
+        db.query(models.Timesheet)
+        .filter(
+            models.Timesheet.foreman_id == foreman_id,
+            models.Timesheet.date == date,
+        )
+        .first()
+    )
+
+    if not timesheet:
+        raise HTTPException(status_code=404, detail="Timesheet not found")
+
+    return timesheet

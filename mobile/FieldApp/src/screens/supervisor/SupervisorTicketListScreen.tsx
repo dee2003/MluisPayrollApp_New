@@ -1,76 +1,62 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
-    FlatList,
-    Image,
     StyleSheet,
     TouchableOpacity,
-    TextInput,
-    ActivityIndicator,
+    Image,
     Alert,
-    SafeAreaView,
-    Dimensions,
-    RefreshControl, // Added RefreshControl for a better UX
+    FlatList,
+    ActivityIndicator,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native'; // Import useNavigation
+import RNPickerSelect from 'react-native-picker-select';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 import apiClient from '../../api/apiClient';
+import { THEME } from '../../constants/theme';
 
-const { width } = Dimensions.get('window');
-
-// Adapted Theme and Colors from Supervisor/PE Dashboard
-const THEME = {
-    colors: {
-        primary: '#4A5C4D', // Primary action color (dark green)
-        backgroundLight: '#F8F7F2', // Light background
-        contentLight: '#3D3D3D', // Primary text content
-        subtleLight: '#797979', // Secondary text content
-        cardLight: '#FFFFFF', // Card/container background
-        brandStone: '#8E8E8E', // Subtle brand color
-        danger: '#FF3B30',
-        success: '#16A34A', // For saved state/indicator
-        border: '#E5E5E5', // Light border
-    },
-    fontFamily: { display: 'System' },
-    borderRadius: { lg: 12, sm: 8, full: 9999 },
-};
-
-const HORIZONTAL_PADDING = 16;
-const COLUMN_SPACING = 10;
-const IMAGE_SIZE = (width - HORIZONTAL_PADDING * 2 - COLUMN_SPACING) / 2;
-
-type Ticket = {
+interface Ticket {
     id: number;
     image_path: string;
-    phase_code?: string;
-};
+    phase_code_id?: number | null;
+}
 
-type RouteParams = {
-    foremanId: number;
-    foremanName: string;
-    date: string;
-};
-
-const SupervisorTicketList = () => {
-    const route = useRoute<any>();
-    const navigation = useNavigation(); // Hook for setting options
-    const { foremanId, foremanName, date } = route.params as RouteParams;
+export default function SupervisorTicketsScreen({ route }: any) {
+    const navigation = useNavigation();
+    const { foremanId, foremanName, date } = route.params;
 
     const [tickets, setTickets] = useState<Ticket[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [refreshing, setRefreshing] = useState(false);
-    const [fullImageUri, setFullImageUri] = useState<string | null>(null);
-    const [phaseCodes, setPhaseCodes] = useState<Record<number, string>>({});
+    const [phaseCodes, setPhaseCodes] = useState<Record<number, number | null>>({});
     const [savedStatus, setSavedStatus] = useState<Record<number, boolean>>({});
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [availablePhases, setAvailablePhases] = useState<{ label: string; value: number }[]>([]);
 
-    // Set dynamic header title
+    // ✅ Set screen title dynamically
     useEffect(() => {
         navigation.setOptions({
             title: `${foremanName}'s Tickets`,
         });
     }, [foremanName, navigation]);
 
+    // ✅ Fetch available phase codes
+    useEffect(() => {
+        const fetchPhaseCodes = async () => {
+            try {
+                const res = await apiClient.get('/api/job-phases/phase-codes');
+                const options = res.data.map((p: any) => ({
+                    label: `${p.code} - ${p.description || ''}`,
+                    value: p.id, // ✅ only ID saved
+                }));
+                setAvailablePhases(options);
+            } catch (err) {
+                console.error('Failed to load phase codes', err);
+            }
+        };
+        fetchPhaseCodes();
+    }, []);
+
+    // ✅ Fetch supervisor tickets
     const loadTickets = useCallback(async () => {
         const fetchStateSetter = refreshing ? setRefreshing : setLoading;
         fetchStateSetter(true);
@@ -78,13 +64,13 @@ const SupervisorTicketList = () => {
             const response = await apiClient.get('/api/tickets/for-supervisor', {
                 params: { foreman_id: foremanId, date },
             });
-            
+
             const data: Ticket[] = response.data || [];
             setTickets(data);
-            
-            const codes: Record<number, string> = {};
+
+            const codes: Record<number, number | null> = {};
             data.forEach(t => {
-                codes[t.id] = t.phase_code || '';
+                codes[t.id] = t.phase_code_id || null;
             });
             setPhaseCodes(codes);
         } catch (err: any) {
@@ -102,253 +88,150 @@ const SupervisorTicketList = () => {
         loadTickets();
     };
 
-    const savePhaseCode = async (ticketId: number) => {
-        const phase_code = phaseCodes[ticketId].trim();
-
-        // Find the original ticket to check if the code changed
+    // ✅ Save selected phase code (takes value directly)
+    const savePhaseCode = async (ticketId: number, phase_code_id: number) => {
         const originalTicket = tickets.find(t => t.id === ticketId);
-        if (originalTicket?.phase_code === phase_code) return; // No change, no save
+        if (originalTicket?.phase_code_id === phase_code_id) return; // no change
 
         try {
-            setSavedStatus(prev => ({ ...prev, [ticketId]: false })); // Reset status while saving
-            await apiClient.patch(`/api/tickets/${ticketId}`, { phase_code });
-            
-            // Update local state to reflect the saved code and set status to true
-            setTickets(prevTickets => prevTickets.map(t => 
-                t.id === ticketId ? { ...t, phase_code: phase_code } : t
-            ));
+            setSavedStatus(prev => ({ ...prev, [ticketId]: false }));
+            await apiClient.patch(`/api/tickets/${ticketId}`, { phase_code_id }); // ✅ backend expects this
+            setTickets(prev =>
+                prev.map(t =>
+                    t.id === ticketId ? { ...t, phase_code_id } : t
+                )
+            );
             setSavedStatus(prev => ({ ...prev, [ticketId]: true }));
         } catch (err: any) {
+            console.error(err);
             Alert.alert('Save Error', err.response?.data?.detail || 'Failed to save phase code');
             setSavedStatus(prev => ({ ...prev, [ticketId]: false }));
         }
     };
 
+    // ✅ Render each ticket
     const renderTicket = ({ item }: { item: Ticket }) => (
         <View style={styles.ticketContainer}>
-            <TouchableOpacity onPress={() => setFullImageUri(item.image_path)}>
+            <TouchableOpacity onPress={() => {}}>
                 <Image
                     source={{ uri: `${apiClient.defaults.baseURL}${item.image_path}` }}
                     style={styles.image}
                 />
             </TouchableOpacity>
+
             <View style={styles.inputRow}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter Phase Code"
-                    placeholderTextColor={THEME.colors.subtleLight}
-                    value={phaseCodes[item.id]}
-                    onChangeText={text => {
-                        setPhaseCodes(prev => ({ ...prev, [item.id]: text }));
-                        setSavedStatus(prev => ({ ...prev, [item.id]: false })); // Mark as unsaved on change
-                    }}
-                    onEndEditing={() => savePhaseCode(item.id)}
-                    returnKeyType="done"
-                />
-                <View style={[styles.statusIndicator, { backgroundColor: savedStatus[item.id] ? THEME.colors.success : THEME.colors.brandStone }]}>
-                    <Ionicons 
-                        name={savedStatus[item.id] ? "checkmark" : "sync"} 
-                        size={16} 
-                        color={THEME.colors.cardLight} 
+                <View style={{ flex: 1 }}>
+                    <RNPickerSelect
+                        onValueChange={(value) => {
+                            if (value == null) return;
+                            setPhaseCodes(prev => ({ ...prev, [item.id]: value }));
+                            setSavedStatus(prev => ({ ...prev, [item.id]: false }));
+                            savePhaseCode(item.id, value); // ✅ pass value directly
+                        }}
+                        items={availablePhases}
+                        value={phaseCodes[item.id]}
+                        placeholder={{ label: 'Select Phase Code', value: null }}
+                        style={{
+                            inputIOS: styles.input,
+                            inputAndroid: styles.input,
+                        }}
+                        useNativeAndroidPickerStyle={false}
+                    />
+                </View>
+
+                <View
+                    style={[
+                        styles.statusIndicator,
+                        { backgroundColor: savedStatus[item.id] ? THEME.colors.success : THEME.colors.brandStone },
+                    ]}
+                >
+                    <Ionicons
+                        name={savedStatus[item.id] ? 'checkmark' : 'sync'}
+                        size={16}
+                        color={THEME.colors.cardLight}
                     />
                 </View>
             </View>
+
+            {savedStatus[item.id] && (
+                <Text style={styles.savedText}>Saved</Text> // ✅ optional feedback text
+            )}
         </View>
     );
 
-    const ListHeaderComponent = (
-        <View style={styles.listHeader}>
-            {/* <Text style={styles.headerSubtitle}>
-                Tickets submitted on: <Text style={styles.headerInfo}>{new Date(date + 'T00:00:00').toLocaleDateString()}</Text>
-            </Text> */}
-            <Text style={styles.instructionText}>
-                Tap image for full view. Enter **Phase Code** below, then tap **Done** or away to save.
-            </Text>
-        </View>
-    );
-
-    if (loading && !refreshing) {
+    if (loading) {
         return (
-            <SafeAreaView style={styles.centeredContainer}>
-                <ActivityIndicator size="large" color={THEME.colors.primary} />
-            </SafeAreaView>
+            <View style={styles.centered}>
+                <ActivityIndicator size="large" color={THEME.colors.brandStone} />
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <FlatList
-                data={tickets}
-                keyExtractor={item => item.id.toString()}
-                renderItem={renderTicket}
-                numColumns={2}
-                columnWrapperStyle={styles.row}
-                contentContainerStyle={styles.listContent}
-                ListHeaderComponent={ListHeaderComponent}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={handleRefresh}
-                        tintColor={THEME.colors.primary}
-                    />
-                }
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="receipt-outline" size={60} color={THEME.colors.brandStone} />
-                        <Text style={styles.emptyText}>No tickets require review.</Text>
-                        <Text style={styles.emptySubText}>The foreman has not submitted any tickets for this date.</Text>
-                    </View>
-                }
-            />
-
-            {/* Full Image Modal/Overlay */}
-            {fullImageUri && (
-                <View style={styles.fullImageContainer}>
-                    <Image source={{ uri: `${apiClient.defaults.baseURL}${fullImageUri}` }} style={styles.fullImage} resizeMode="contain" />
-                    <TouchableOpacity style={styles.closeButton} onPress={() => setFullImageUri(null)}>
-                        <Ionicons name="close-circle" size={40} color={THEME.colors.cardLight} />
-                    </TouchableOpacity>
-                </View>
-            )}
-        </SafeAreaView>
+        <FlatList
+            data={tickets}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderTicket}
+            onRefresh={handleRefresh}
+            refreshing={refreshing}
+            contentContainerStyle={styles.listContainer}
+        />
     );
-};
+}
 
 const styles = StyleSheet.create({
-    container: { 
-        flex: 1, 
-        backgroundColor: THEME.colors.backgroundLight 
-    },
-    centeredContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: THEME.colors.backgroundLight,
-    },
-    listContent: { 
-        paddingBottom: 20,
-    },
-    
-    // Header
-    listHeader: {
-        paddingHorizontal: HORIZONTAL_PADDING,
-        paddingTop: 10,
-        paddingBottom: 10,
-        marginBottom: 5,
-    },
-    headerSubtitle: {
-        fontFamily: THEME.fontFamily.display,
-        fontSize: 15,
-        fontWeight: '500',
-        color: THEME.colors.subtleLight,
-        marginBottom: 8,
-    },
-    headerInfo: {
-        fontWeight: '700',
-        color: THEME.colors.primary,
-    },
-    instructionText: {
-        fontFamily: THEME.fontFamily.display,
-        fontSize: 12,
-        color: THEME.colors.brandStone,
-        paddingTop: 8,
-        borderTopWidth: 1,
-        borderTopColor: THEME.colors.border,
-    },
-
-    // Ticket Grid
-    row: { 
-        justifyContent: 'space-between', 
-        paddingHorizontal: HORIZONTAL_PADDING, 
-        marginTop: COLUMN_SPACING 
+    listContainer: {
+        padding: 10,
     },
     ticketContainer: {
-        width: IMAGE_SIZE,
         backgroundColor: THEME.colors.cardLight,
-        borderRadius: THEME.borderRadius.sm,
+        borderRadius: 12,
+        marginBottom: 16,
         overflow: 'hidden',
-        elevation: 3,
         shadowColor: '#000',
         shadowOpacity: 0.1,
         shadowRadius: 5,
-        shadowOffset: { width: 0, height: 2 },
+        elevation: 3,
+        paddingBottom: 8,
     },
     image: {
         width: '100%',
-        height: IMAGE_SIZE,
-        resizeMode: 'cover',
-        backgroundColor: THEME.colors.border,
+        height: 200,
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
     },
-    
-    // Input and Status Indicator
     inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: THEME.colors.border,
-        backgroundColor: THEME.colors.backgroundLight,
+        padding: 10,
     },
     input: {
         flex: 1,
-        fontFamily: THEME.fontFamily.display,
-        height: 40,
-        paddingHorizontal: 10,
-        fontSize: 15,
-        fontWeight: '600',
-        textAlign: 'center',
-        color: THEME.colors.primary,
+        borderWidth: 1,
+        borderColor: THEME.colors.subtleLight,
+        borderRadius: 8,
+        padding: 8,
+        color: THEME.colors.textDark,
+        backgroundColor: '#f9f9f9',
     },
     statusIndicator: {
-        width: 40,
-        height: 40,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        marginLeft: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    savedText: {
+        textAlign: 'right',
+        color: THEME.colors.success,
+        fontSize: 12,
+        marginRight: 10,
+        marginTop: -6,
+    },
+    centered: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        borderLeftWidth: 1,
-        borderLeftColor: THEME.colors.border,
-    },
-    
-    // Empty State
-    emptyContainer: { 
-        alignItems: 'center', 
-        marginTop: 80,
-        paddingHorizontal: 40
-    },
-    emptyText: { 
-        fontFamily: THEME.fontFamily.display,
-        marginTop: 16, 
-        textAlign: 'center', 
-        fontSize: 18, 
-        fontWeight: '600',
-        color: THEME.colors.subtleLight 
-    },
-    emptySubText: {
-        fontFamily: THEME.fontFamily.display,
-        marginTop: 8, 
-        textAlign: 'center', 
-        fontSize: 14, 
-        color: THEME.colors.brandStone
-    },
-
-    // Full Image Modal
-    fullImageContainer: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.95)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 999,
-    },
-    fullImage: {
-        width: '90%',
-        height: '80%',
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 40,
-        right: 20,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        borderRadius: THEME.borderRadius.full,
-        padding: 4,
     },
 });
-
-export default SupervisorTicketList;

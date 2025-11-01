@@ -1,12 +1,18 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, Path
+from fastapi import APIRouter, Depends, Query, HTTPException, Path, status
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, Date
 from datetime import date as date_type
 from collections import defaultdict
 from typing import List
+from pydantic import BaseModel
+from ..database import get_db
 
 from .. import models, schemas, database
 
+
+# ==========================================================
+# 🔹 SINGLE Router Declaration
+# ==========================================================
 router = APIRouter(
     prefix="/api/tickets",
     tags=["Tickets"]
@@ -14,63 +20,16 @@ router = APIRouter(
 
 
 # ==========================================================
-# 🔹 1️⃣ Foreman View: All Tickets (Submitted + Unsubmitted)
+# 🔹 1️⃣ Foreman View: All Tickets (optional)
 # ==========================================================
-@router.get("/images-by-date/{foreman_id}")
-def list_images_by_date(foreman_id: int, db: Session = Depends(database.get_db)):
-    """
-    Returns all tickets grouped by date for the foreman (including unsubmitted ones).
-    """
-    all_tickets = (
-        db.query(models.Ticket)
-        .filter(models.Ticket.foreman_id == foreman_id)
-        .all()
-    )
-
-    all_submissions = (
-        db.query(models.DailySubmission)
-        .filter(models.DailySubmission.foreman_id == foreman_id)
-        .all()
-    )
-
-    # Collect all submitted ticket IDs from related timesheets
-    submitted_ticket_ids = set()
-    for sub in all_submissions:
-        if sub.timesheets:
-            for ts in sub.timesheets:
-                if ts.ticket_id:
-                    submitted_ticket_ids.add(ts.ticket_id)
-
-    grouped_tickets = defaultdict(list)
-    for t in all_tickets:
-        date_str = t.created_at.strftime("%Y-%m-%d")
-        grouped_tickets[date_str].append({
-            "id": t.id,
-            "image_url": t.image_path,
-            "submitted": t.id in submitted_ticket_ids
-        })
-
-    images_by_date = []
-    for date, imgs in grouped_tickets.items():
-        submission_for_date = next(
-            (s for s in all_submissions if s.date.strftime("%Y-%m-%d") == date),
-            None
-        )
-        images_by_date.append({
-            "date": date,
-            "images": imgs,
-            "status": submission_for_date.status if submission_for_date else None,
-            "submission_id": submission_for_date.id if submission_for_date else None,
-            "ticket_count": len(imgs),
-        })
-
-    return {"imagesByDate": images_by_date}
-
+# (You can keep your commented block here if needed)
 
 
 # ==========================================================
 # 🔹 2️⃣ Supervisor View: Only Submitted Tickets
 # ==========================================================
+from ..models import SubmissionStatus
+
 @router.get("/for-supervisor", response_model=List[schemas.TicketSummary])
 def get_tickets_for_supervisor(
     db: Session = Depends(database.get_db),
@@ -78,7 +37,7 @@ def get_tickets_for_supervisor(
     date: str = Query(..., description="Date to filter tickets (YYYY-MM-DD)")
 ):
     """
-    Supervisors should ONLY see tickets that are already submitted (sent=True).
+    Supervisors should ONLY see tickets that are already submitted.
     """
     try:
         target_date = date_type.fromisoformat(date)
@@ -90,7 +49,7 @@ def get_tickets_for_supervisor(
         .filter(
             models.Ticket.foreman_id == foreman_id,
             cast(models.Ticket.created_at, Date) == target_date,
-            models.Ticket.sent == True  # 👈 Only submitted tickets
+            models.Ticket.status == SubmissionStatus.SUBMITTED  # ✅ fixed
         )
         .all()
     )
@@ -107,13 +66,26 @@ def get_tickets_for_project_engineer(
     db: Session = Depends(database.get_db),
     supervisor_id: int = Query(...),
     date: str = Query(...),
+    project_engineer_id: int = Query(...),  # ✅ new param
 ):
     """
-    Project Engineers see tickets only from APPROVED submissions.
+    Get all tickets for the given Project Engineer,
+    limited to their assigned job codes.
     """
     target_date = date_type.fromisoformat(date)
 
-    # Get foremen who had approved submissions by this supervisor
+    # ✅ Get all job codes assigned to this Project Engineer
+    job_codes = (
+        db.query(models.JobPhase.job_code)
+        .filter(models.JobPhase.project_engineer_id == project_engineer_id)
+        .all()
+    )
+    job_codes = [jc[0] for jc in job_codes]  # flatten list of tuples
+
+    if not job_codes:
+        raise HTTPException(status_code=404, detail="No jobs assigned to this Project Engineer")
+
+    # ✅ Get foremen whose submissions belong to the supervisor on that date
     foremen = (
         db.query(models.DailySubmission.foreman_id)
         .filter(
@@ -125,47 +97,63 @@ def get_tickets_for_project_engineer(
         .subquery()
     )
 
+    # ✅ Get tickets only for those job codes belonging to the engineer
     tickets = (
         db.query(models.Ticket)
         .filter(
             models.Ticket.foreman_id.in_(foremen),
             cast(models.Ticket.created_at, Date) == target_date,
-            models.Ticket.sent == True
+            models.Ticket.sent == True,
+            models.Ticket.job_code.in_(job_codes)  # ✅ filter by assigned job codes
         )
         .all()
     )
 
     return [schemas.TicketSummary.from_orm(t) for t in tickets]
 
-
-
 # ==========================================================
 # 🔹 4️⃣ Ticket Update Endpoint
 # ==========================================================
-from pydantic import BaseModel
-
 class TicketUpdatePhaseCode(BaseModel):
     phase_code: str
 
-@router.patch("/{ticket_id}", response_model=schemas.TicketSummary)
+@router.patch("/{ticket_id}", response_model=schemas.Ticket)
 def update_ticket_phase_code(
-    update: TicketUpdatePhaseCode,
-    ticket_id: int = Path(..., description="ID of the ticket to update"),
-    db: Session = Depends(database.get_db)
+    ticket_id: int,
+    update: schemas.TicketUpdatePhase,
+    db: Session = Depends(get_db),
 ):
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    ticket.phase_code = update.phase_code
+    ticket.phase_code_id = update.phase_code_id
     db.commit()
     db.refresh(ticket)
     return ticket
+# ==========================================================
+# 🔹 5️⃣ Submit Tickets
+# ==========================================================
+@router.post("/submit", status_code=status.HTTP_200_OK)
+def submit_tickets(payload: dict, db: Session = Depends(database.get_db)):
+    ticket_ids = payload.get("ticket_ids", [])
+    if not ticket_ids:
+        raise HTTPException(status_code=400, detail="No ticket IDs provided")
 
+    tickets = db.query(models.Ticket).filter(models.Ticket.id.in_(ticket_ids)).all()
+    if not tickets:
+        raise HTTPException(status_code=404, detail="Tickets not found")
+
+    for ticket in tickets:
+        ticket.status = "SUBMITTED"
+        db.add(ticket)
+
+    db.commit()
+    return {"message": "Tickets submitted successfully", "count": len(tickets)}
 
 
 # ==========================================================
-# 🔹 5️⃣ Health Check Endpoint
+# 🔹 6️⃣ Health Check Endpoint
 # ==========================================================
 @router.get("/")
 async def root():

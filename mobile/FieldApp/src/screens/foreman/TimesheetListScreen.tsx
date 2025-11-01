@@ -8,6 +8,7 @@ import apiClient from '../../api/apiClient';
 import { Timesheet } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { ForemanStackParamList } from '../../navigation/AppNavigator';
+import { useRoute,RouteProp  } from "@react-navigation/native";
 
 type ListNavigationProp = StackNavigationProp<ForemanStackParamList, 'TimesheetList'>;
 
@@ -37,30 +38,46 @@ const TimesheetListScreen = () => {
     const navigation = useNavigation<ListNavigationProp>();
     const isFocused = useIsFocused();
     const { user } = useAuth();
+const route = useRoute<TimesheetListRouteProps>();
+type TimesheetListRouteProps = RouteProp<
+  { TimesheetList: { refresh?: boolean } },
+  "TimesheetList"
+>;
 
-    const fetchTimesheets = async () => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
 
-        setLoading(true);
-        try {
-            const response = await apiClient.get<Timesheet[]>(`/api/timesheets/by-foreman/${user.id}`);
-            // Assuming Timesheet object has a `status` property for the badge logic
-            setTimesheets(response.data); 
-        } catch (error) {
-            console.error('Failed to fetch timesheets:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+// /src/screens/foreman/TimesheetListScreen.tsx
 
-    useEffect(() => {
-        if (isFocused && user) {
-            fetchTimesheets();
-        }
-    }, [isFocused, user]);
+const fetchTimesheets = async () => {
+    if (!user) {
+        setLoading(false);
+        return;
+    }
+
+    setLoading(true);
+    try {
+        const response = await apiClient.get<Timesheet[]>(`/api/timesheets/by-foreman/${user.id}`);
+
+        const visibleTimesheets = response.data.filter(
+            (ts) => ts.status?.toLowerCase() === 'draft' || ts.status?.toLowerCase() === 'pending'
+        );
+
+        setTimesheets(visibleTimesheets);
+    } catch (error: any) {
+        console.error('❌ Failed to fetch timesheets:', error.message || error);
+        window.alert('Unable to load timesheets. Please try again.');
+    } finally {
+        setLoading(false);
+    }
+};
+
+
+
+useEffect(() => {
+  if (isFocused && user) {
+    fetchTimesheets();
+  }
+}, [isFocused, user, route?.params?.refresh]);
+
 
     const getStatusStyle = (status: string) => {
         switch (status.toLowerCase()) {

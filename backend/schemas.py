@@ -4,6 +4,7 @@ from datetime import date
 from datetime import date, datetime
 from .models import SubmissionStatus
 from .models import ResourceStatus
+from .models import SubmissionStatus
 
 # --- Shared Pydantic v2 config ---
 model_config = ConfigDict(from_attributes=True)
@@ -185,19 +186,23 @@ class JobPhaseBase(BaseModel):
     job_description: Optional[str] = None
     project_engineer: Optional[str] = None
     location_id: Optional[int] = None
+    project_engineer_id: Optional[int] = None  # 👈 new
+    project_engineer: Optional[str] = None     # 👈 keep existing
     status: ResourceStatus = ResourceStatus.ACTIVE
-    phase_codes: List[str] = []  # list of string codes sent from frontend
+    phase_codes: List[str] = []
+
 
 
 class JobPhaseCreate(JobPhaseBase):
     pass
 
 #class JobPhaseUpdate(BaseModel):
-class JobPhaseUpdate(BaseModel):
 
+class JobPhaseUpdate(BaseModel):
     contract_no: Optional[str] = None
     job_description: Optional[str] = None
-    project_engineer: Optional[str] = None
+    project_engineer_id: Optional[int] = None  # 👈 new
+    project_engineer: Optional[str] = None     # 👈 keep existing
     jurisdiction: Optional[str] = None
     status: Optional[ResourceStatus] = None
     phase_codes: Optional[List[str]] = None
@@ -208,6 +213,7 @@ class JobPhase(BaseModel):
     job_code: str
     contract_no: Optional[str] = None
     job_description: Optional[str] = None
+    project_engineer_id: Optional[int] = None
     project_engineer: Optional[str] = None
     jurisdiction: Optional[str] = None
     status: ResourceStatus
@@ -345,7 +351,18 @@ class TimesheetCreate(TimesheetBase):
 
 class TimesheetUpdate(BaseModel):
     data: Optional[Dict[str, Any]] = None
-    status: Optional[str] = None
+    status: Optional[SubmissionStatus] = None
+    date: Optional[date] = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v):
+        if isinstance(v, str):
+            v = v.strip().upper()
+            if v in SubmissionStatus.__members__:
+                return SubmissionStatus[v]
+        return v
+
 class TimesheetFileBase(BaseModel):
     file_path: str
 class TimesheetFile(BaseModel):
@@ -398,27 +415,27 @@ class AppData(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
-class DailySubmissionBase(BaseModel):
-    date: date
-    foreman_id: int
-    job_code: Optional[str] = None
-    total_hours: float
-    ticket_count: int
-    status: SubmissionStatus
-class DailySubmission(DailySubmissionBase):
-    id: int
+# class DailySubmissionBase(BaseModel):
+#     date: date
+#     foreman_id: int
+#     job_code: Optional[str] = None
+#     total_hours: float
+#     ticket_count: int
+#     status: SubmissionStatus
+# class DailySubmission(DailySubmissionBase):
+#     id: int
     
     # Denormalized read-only fields for the supervisor dashboard
-    foreman_name: str
-    job_name: Optional[str] = None  # optional convenience if you resolve job name server-side
+    # foreman_name: str
+    # job_name: Optional[str] = None  # optional convenience if you resolve job name server-side
 
-    class Config:
-        from_attributes = True  # pydantic v2; use orm_mode=True for pydantic v1
-class DailySubmissionCreate(BaseModel):
-    date: date
-    timesheet_ids: List[int]
-    ticket_ids: List[int] = []      # if you have tickets
-    job_code: Optional[str] = None  # optional
+    # class Config:
+    #     from_attributes = True  # pydantic v2; use orm_mode=True for pydantic v1
+# class DailySubmissionCreate(BaseModel):
+#     date: date
+#     timesheet_ids: List[int]
+#     ticket_ids: List[int] = []      # if you have tickets
+#     job_code: Optional[str] = None  # optional
 
 
 # For supervisor requesting changes
@@ -456,23 +473,58 @@ class ValidationResponse(BaseModel):
     unreviewed_timesheets: List[UnreviewedItem] = []
     incomplete_tickets: List[UnreviewedItem] = []
 
-# class TicketSummary(BaseModel):
-#     """Schema for listing tickets."""
-#     id: int
-#     ticket_number: Optional[str] = None
-#     job_name: Optional[str] = None
+from typing import Optional
+from datetime import datetime
 
-#     class Config:
-#         from_attributes = True
-class TicketSummary(BaseModel):
+class TicketBase(BaseModel):
+    foreman_id: int
+    job_phase_id: int
+    image_path: str
+    extracted_text: Optional[str] = None
+    status: Optional[str] = "PENDING"
+    timesheet_id: Optional[int] = None
+    phase_code_id: Optional[int] = None  # ✅ NEW
+
+class TicketCreate(TicketBase):
+    pass
+
+class Ticket(BaseModel):
     id: int
-    image_path: str | None = None
-    job_code: Optional[str] = None
-    phase_code: str | None = None
+    foreman_id: int
+    job_phase_id: int
+    image_path: str
+    extracted_text: Optional[str] = None
+    status: str
+    created_at: Optional[datetime]
+    timesheet_id: Optional[int]
     
+    # ✅ Include the full phase code object (code, description, unit)
+    phase_code: Optional[PhaseCode] = None
+
+    model_config = ConfigDict(from_attributes=True)
+class TicketUpdatePhase(BaseModel):
+    phase_code_id: int
+
+    class Config: True  # replaces orm_mode in Pydantic v2
+class PhaseCodeSchema(BaseModel):
+    id: int
+    code: str
+    description: Optional[str]
 
     class Config:
         from_attributes = True
+
+
+class TicketSummary(BaseModel):
+    id: int
+    image_path: str
+    phase_code_id: Optional[int]
+    phase_code: Optional[PhaseCodeSchema] = None
+
+    class Config:
+        from_attributes = True
+
+
 
 
 class TimesheetSummary(BaseModel):
