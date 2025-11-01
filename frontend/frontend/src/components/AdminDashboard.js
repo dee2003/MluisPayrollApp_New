@@ -839,10 +839,10 @@ const handleSubmit = e => {
         values.category_id = selectedCategory.id;
       }
     }
-    if (!values.id || values.id.trim() === "") {
-      alert("Please enter Equipment ID before submitting.");
-      return;
-    }
+    // if (!values.id || values.id.trim() === "") {
+    //   alert("Please enter Equipment ID before submitting.");
+    //   return;
+    // }
     console.log("Submitting form values:", values);
     onSubmit(values);
   }

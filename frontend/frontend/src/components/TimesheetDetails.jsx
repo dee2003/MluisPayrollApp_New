@@ -64,8 +64,12 @@ const TimesheetDetails = () => {
   useEffect(() => {
     if (!ts) {
       axios.get(`${API_URL}/timesheets/${id}/`)
-           .then((res) => setTs(res.data))
-           .catch((err) => console.error("Failed to fetch timesheet details:", err));
+  .then((res) => {
+    console.log("Full Timesheet Response:", res.data);
+    setForemanData(res.data.data); // ✅ set only the nested 'data' field
+  })
+  .catch((err) => console.error("Failed to fetch timesheet details:", err));
+
     }
   }, [id, ts]);
 
@@ -73,7 +77,10 @@ const TimesheetDetails = () => {
     if (ts?.foreman_id) {
       axios
         .get(`${API_URL}/crew-mapping/by-foreman/${ts.foreman_id}`)
-        .then((res) => setForemanData(res.data))
+        .then((res) => {
+  console.log("Foreman Data API response:", res.data);
+  setForemanData(res.data);
+})
         .catch((err) => console.error("Failed to fetch foreman data:", err));
     }
   }, [ts]);

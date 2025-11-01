@@ -11,7 +11,9 @@ const TimesheetForm = ({ onClose }) => {
     const [selectedJobCode, setSelectedJobCode] = useState("");
     const [jobData, setJobData] = useState(null);
     const [selectedPhases, setSelectedPhases] = useState([]);
-    
+    const [supervisors, setSupervisors] = useState([]);
+    const [selectedSupervisorId, setSelectedSupervisorId] = useState("");
+
     // --- Additional fields ---
     const [jobName, setJobName] = useState("");
     const [timeOfDay, setTimeOfDay] = useState("");
@@ -56,12 +58,15 @@ useEffect(() => {
 
     // --- Load initial data (Foremen and Job Codes) ---
     useEffect(() => {
-        axios.get(`${API_URL}/users`)
-            .then((res) => {
-                const foremanUsers = res.data.filter(user => user.role === "foreman");
-                setForemen(foremanUsers);
-            })
-            .catch(err => console.error("Failed to load foremen:", err));
+    axios.get(`${API_URL}/users`)
+        .then((res) => {
+            const users = res.data;
+            const foremanUsers = users.filter(user => user.role === "foreman");
+            const supervisorUsers = users.filter(user => user.role === "supervisor");
+            setForemen(foremanUsers);
+            setSupervisors(supervisorUsers);
+        })
+        .catch(err => console.error("Failed to load users:", err));
 
         axios.get(`${API_URL}/job-phases/active`)
             .then((res) => setJobCodes(res.data))
@@ -141,7 +146,9 @@ useEffect(() => {
             alert("Please select both Foreman and Job Code before submitting.");
             return;
         }
-
+        const selectedSupervisor = supervisors.find(
+    (sup) => sup.id === parseInt(selectedSupervisorId, 10)
+  );
         const timesheetData = {
             job_name: jobName,
             job: {
@@ -154,6 +161,12 @@ useEffect(() => {
             location,
             contract_no: contract,
             project_engineer: projectEngineer,
+            supervisor: selectedSupervisor
+      ? {
+          id: selectedSupervisor.id,
+          name: `${selectedSupervisor.first_name} ${selectedSupervisor.last_name}`,
+        }
+      : null,
             ...foremanData,
             work_description: workDescription,
   concrete_supplier: concreteSupplier,
@@ -172,6 +185,7 @@ useEffect(() => {
 
         const payload = {
             foreman_id: parseInt(selectedForemanId, 10),
+            // supervisor_id: selectedSupervisorId ? parseInt(selectedSupervisorId, 10) : null,
             date,
             job_phase_id: selectedJobPhaseId,
             data: timesheetData,
@@ -370,6 +384,23 @@ const topSoilSupplierOptions = suppliers
     {locations.map((loc) => (
       <option key={loc.id} value={loc.name}>
         {loc.name}
+      </option>
+    ))}
+  </select>
+</div>
+<div className="form-group">
+  <label htmlFor="supervisor">Supervisor</label>
+  <select
+    id="supervisor"
+    className="form-select"
+    value={selectedSupervisorId}
+    onChange={(e) => setSelectedSupervisorId(e.target.value)}
+    disabled={loading}
+  >
+    <option value="">-- Select Supervisor --</option>
+    {supervisors.map((sup) => (
+      <option key={sup.id} value={sup.id}>
+        {sup.first_name} {sup.last_name}
       </option>
     ))}
   </select>

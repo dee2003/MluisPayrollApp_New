@@ -529,57 +529,107 @@ def get_crew_mapping_by_id(crew_id: int, db: Session = Depends(database.get_db))
         raise HTTPException(status_code=404, detail=f"Crew mapping with id {crew_id} not found")
     return mapping
 
+# @crew_mapping_router.post("/", response_model=schemas.CrewMappingResponse, status_code=201)
+# def create_crew_mapping(crew: schemas.CrewMappingCreate, db: Session = Depends(database.get_db)):
+#     # ... function body remains the same
+
+#     """
+#     Creates a new crew mapping and correctly links the related resources
+#     using SQLAlchemy relationships, ensuring correct data types for IDs.
+#     """
+#     db_crew = models.CrewMapping(
+#         foreman_id=crew.foreman_id,
+#         status=crew.status or "Active"
+#     )
+
+#     # Handle Employees (ID is String)
+#     if crew.employee_ids:
+#         string_ids = [str(eid) for eid in crew.employee_ids]
+#         employee_objects = db.query(models.Employee).filter(models.Employee.id.in_(string_ids)).all()
+#         db_crew.employees = employee_objects
+#     # ... and so on for other relationships ...
+
+
+#     # Handle Equipment (ID is String)
+#     if crew.equipment_ids:
+#         # ✅ FIX: Convert all IDs to strings before querying
+#         string_ids = [str(eid) for eid in crew.equipment_ids]
+#         equipment_objects = db.query(models.Equipment).filter(models.Equipment.id.in_(string_ids)).all()
+#         db_crew.equipment = equipment_objects
+
+#     # Handle Materials (ID is Integer - no change needed)
+#     if crew.material_ids:
+#         material_objects = db.query(models.Material).filter(models.Material.id.in_(crew.material_ids)).all()
+#         db_crew.materials = material_objects
+
+#     # Handle Vendors (ID is Integer - no change needed)
+#     if crew.vendor_ids:
+#         vendor_objects = db.query(models.Vendor).filter(models.Vendor.id.in_(crew.vendor_ids)).all()
+#         db_crew.vendors = vendor_objects
+
+#     # Handle Dumping Sites (ID is String)
+#     if crew.dumping_site_ids:
+#         # ✅ FIX: Convert all IDs to strings before querying
+#         string_ids = [str(dsid) for dsid in crew.dumping_site_ids]
+#         dumping_site_objects = db.query(models.DumpingSite).filter(models.DumpingSite.id.in_(string_ids)).all()
+#         db_crew.dumping_sites = dumping_site_objects
+        
+#     db.add(db_crew)
+#     db.commit()
+#     db.refresh(db_crew)
+#     return db_crew
+    
+
 @crew_mapping_router.post("/", response_model=schemas.CrewMappingResponse, status_code=201)
 def create_crew_mapping(crew: schemas.CrewMappingCreate, db: Session = Depends(database.get_db)):
-    # ... function body remains the same
-
     """
     Creates a new crew mapping and correctly links the related resources
     using SQLAlchemy relationships, ensuring correct data types for IDs.
     """
+
+    # ✅ Step 1: Deactivate all previous active mappings for this foreman
+    db.query(models.CrewMapping).filter(
+        models.CrewMapping.foreman_id == crew.foreman_id,
+        models.CrewMapping.status == "Active"
+    ).update({models.CrewMapping.status: "Inactive"})
+    db.commit()
+
+    # ✅ Step 2: Create new mapping as Active
     db_crew = models.CrewMapping(
         foreman_id=crew.foreman_id,
-        status=crew.status or "Active"
+        status="Active"  # always Active when newly created
     )
 
-    # Handle Employees (ID is String)
+    # ✅ Step 3: Handle relationships safely
     if crew.employee_ids:
         string_ids = [str(eid) for eid in crew.employee_ids]
         employee_objects = db.query(models.Employee).filter(models.Employee.id.in_(string_ids)).all()
         db_crew.employees = employee_objects
-    # ... and so on for other relationships ...
 
-
-    # Handle Equipment (ID is String)
     if crew.equipment_ids:
-        # ✅ FIX: Convert all IDs to strings before querying
         string_ids = [str(eid) for eid in crew.equipment_ids]
         equipment_objects = db.query(models.Equipment).filter(models.Equipment.id.in_(string_ids)).all()
         db_crew.equipment = equipment_objects
 
-    # Handle Materials (ID is Integer - no change needed)
     if crew.material_ids:
         material_objects = db.query(models.Material).filter(models.Material.id.in_(crew.material_ids)).all()
         db_crew.materials = material_objects
 
-    # Handle Vendors (ID is Integer - no change needed)
     if crew.vendor_ids:
         vendor_objects = db.query(models.Vendor).filter(models.Vendor.id.in_(crew.vendor_ids)).all()
         db_crew.vendors = vendor_objects
 
-    # Handle Dumping Sites (ID is String)
     if crew.dumping_site_ids:
-        # ✅ FIX: Convert all IDs to strings before querying
         string_ids = [str(dsid) for dsid in crew.dumping_site_ids]
         dumping_site_objects = db.query(models.DumpingSite).filter(models.DumpingSite.id.in_(string_ids)).all()
         db_crew.dumping_sites = dumping_site_objects
-        
+
+    # ✅ Step 4: Save the new mapping
     db.add(db_crew)
     db.commit()
     db.refresh(db_crew)
-    return db_crew
-    
 
+    return db_crew
 
 
 @crew_mapping_router.put("/{crew_id}", response_model=schemas.CrewMappingResponse)
