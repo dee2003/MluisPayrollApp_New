@@ -356,7 +356,7 @@ def get_tickets_by_foreman(foreman_id: int, db: Session = Depends(database.get_d
 def list_images_by_date(foreman_id: int, db: Session = Depends(database.get_db)):
     """
     Returns all OCR tickets grouped by date for the given foreman.
-    Tickets show 'submitted' = True only if their status is 'Submitted'.
+    Tickets show 'submitted' = True only if their status is 'SUBMITTED'.
     """
 
     # 1️⃣ Fetch all OCR tickets for this foreman
@@ -374,7 +374,7 @@ def list_images_by_date(foreman_id: int, db: Session = Depends(database.get_db))
         grouped_tickets[date_str].append({
             "id": t.id,
             "image_url": t.image_path,
-            "submitted": t.status == "Submitted",  # ✅ FIXED HERE
+            "submitted": t.status == "SUBMITTED",  # ✅ FIXED HERE
         })
 
     # 3️⃣ Build final response

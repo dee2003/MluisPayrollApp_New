@@ -5,6 +5,8 @@ import {
   FaRegEdit,
   FaClipboardList,
   FaTrash,
+  FaSearch, // Added
+  FaCamera, // Added
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import TimesheetForm from "./TimesheetForm.jsx";
@@ -13,6 +15,7 @@ import "./ApplicationAdmin.css";
 
 const TIMESHEETS_PER_PAGE = 2;
 const API_URL = "http://127.0.0.1:8000/api";
+
 export default function ApplicationAdmin() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState("projects");
@@ -23,22 +26,29 @@ export default function ApplicationAdmin() {
   const [selectedId, setSelectedId] = useState(null);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("");
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const timesheetsPerPage = TIMESHEETS_PER_PAGE;
-  const [searchForeman, setSearchForeman] = useState("");
-  const [searchJobCode, setSearchJobCode] = useState("");
+
+  // --- NEW SEARCH STATE ---
+  const [searchType, setSearchType] = useState("foreman"); // 'foreman' or 'jobCode'
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // --- UPDATED FILTER LOGIC ---
   const filteredTimesheets = timesheets.filter((ts) => {
-  const foremanMatch = ts.foreman_name
-    ?.toLowerCase()
-    .includes(searchForeman.toLowerCase());
-  const jobCodeMatch = ts.data?.job?.job_code
-    ?.toLowerCase()
-    .includes(searchJobCode.toLowerCase());
-  return foremanMatch && jobCodeMatch;
-});
-  // 🟢 Key: totalPages is now always computed, never in state!
-  // const totalPages = Math.ceil(timesheets.length / timesheetsPerPage);
+    if (searchQuery.trim() === "") return true; // Show all if query is empty
+
+    const query = searchQuery.toLowerCase();
+
+    if (searchType === "foreman") {
+      return ts.foreman_name?.toLowerCase().includes(query);
+    }
+    if (searchType === "jobCode") {
+      return ts.data?.job?.job_code?.toLowerCase().includes(query);
+    }
+    return true;
+  });
+
   const totalPages = Math.ceil(filteredTimesheets.length / timesheetsPerPage);
 
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -47,12 +57,11 @@ export default function ApplicationAdmin() {
     month: "long",
     year: "numeric",
   });
-  
+
   const [mappings, setMappings] = useState({});
   const [loadingMappings, setLoadingMappings] = useState({});
   const navigate = useNavigate();
-  // const [expandedCardId, setExpandedCardId] = useState(null);
-  // const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
+
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     window.location.reload();
@@ -72,13 +81,15 @@ export default function ApplicationAdmin() {
   const handleSectionClick = (sec) => {
     setActiveSection(sec);
   };
-  // --- Fetch all timesheets ---
+
   // --- Fetch all timesheets ---
   const fetchTimesheets = async () => {
     setError("");
     try {
       const res = await axios.get(`${API_URL}/timesheets/`);
-      const sorted = res.data.sort((a, b) => new Date(b.date) - new Date(a.date));
+      const sorted = res.data.sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+      );
       setTimesheets(sorted);
 
       // Adjust page if needed (after fetch or delete)
@@ -93,19 +104,21 @@ export default function ApplicationAdmin() {
       setError("Could not fetch timesheets");
     }
   };
-    useEffect(() => {
+  useEffect(() => {
     if (activeSection === "viewTimesheets") {
       fetchTimesheets();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection]); 
+  }, [activeSection]);
 
   // --- Fetch crew mapping for a foreman ---
   const fetchMapping = async (foremanId) => {
     if (!foremanId || mappings[foremanId] || loadingMappings[foremanId]) return;
     try {
       setLoadingMappings((prev) => ({ ...prev, [foremanId]: true }));
-      const res = await axios.get(`${API_URL}/crew-mapping/by-foreman/${foremanId}`);
+      const res = await axios.get(
+        `${API_URL}/crew-mapping/by-foreman/${foremanId}`
+      );
       setMappings((prev) => ({ ...prev, [foremanId]: res.data }));
     } catch (err) {
       console.error(
@@ -116,7 +129,7 @@ export default function ApplicationAdmin() {
       setLoadingMappings((prev) => ({ ...prev, [foremanId]: false }));
     }
   };
-   // ⭐️ EVENT HANDLERS ⭐️
+  // ⭐️ EVENT HANDLERS ⭐️
   const handleRowClick = (ts, e) => {
     if (e.target.closest("button")) return;
     navigate(`/timesheet/${ts.id}`, { state: { timesheet: ts } });
@@ -136,7 +149,9 @@ export default function ApplicationAdmin() {
 
       setSuccessMessage("Timesheet deleted successfully.");
       // Adjust page if last item deleted
-      const computedTotalPages = Math.ceil(updatedTimesheets.length / timesheetsPerPage);
+      const computedTotalPages = Math.ceil(
+        updatedTimesheets.length / timesheetsPerPage
+      );
       if (updatedTimesheets.length > 0 && currentPage > computedTotalPages) {
         setCurrentPage(currentPage - 1);
       }
@@ -161,12 +176,12 @@ export default function ApplicationAdmin() {
   // ⭐️ PAGINATION LOGIC ⭐️
   const indexOfLastTimesheet = currentPage * timesheetsPerPage;
   const indexOfFirstTimesheet = indexOfLastTimesheet - timesheetsPerPage;
-  // const currentTimesheets = timesheets.slice(indexOfFirstTimesheet, indexOfLastTimesheet);
-  const currentTimesheets = filteredTimesheets.slice(indexOfFirstTimesheet, indexOfLastTimesheet);
+  const currentTimesheets = filteredTimesheets.slice(
+    indexOfFirstTimesheet,
+    indexOfLastTimesheet
+  );
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
-  // ⭐️ FILTER LOGIC ⭐️
-
 
   // ⭐️ PAGINATION CONTROLS COMPONENT ⭐️
   const PaginationControls = () => {
@@ -188,11 +203,13 @@ export default function ApplicationAdmin() {
         </button>
         {/* NUMBERED PAGE LINKS */}
         <ul className="pagination-list">
-          {pageNumbers.map(number => (
+          {pageNumbers.map((number) => (
             <li key={number} className="page-item">
               <button
                 onClick={() => paginate(number)}
-                className={`page-link ${currentPage === number ? 'active' : ''}`}
+                className={`page-link ${
+                  currentPage === number ? "active" : ""
+                }`}
               >
                 {number}
               </button>
@@ -227,11 +244,16 @@ export default function ApplicationAdmin() {
           </button>
         </div>
         <div className="sidebar-header">
-          {!sidebarCollapsed && <h3 className="sidebar-title">APPLICATION ADMIN</h3>}
+          {!sidebarCollapsed && (
+            <h3 className="sidebar-title">APPLICATION ADMIN</h3>
+          )}
           {!sidebarCollapsed && (
             <>
               <div className="current-date">{currentDate}</div>
-              <button onClick={handleLogout} className="btn btn-outline btn-sm logout-btn">
+              <button
+                onClick={handleLogout}
+                className="btn btn-outline btn-sm logout-btn"
+              >
                 Logout
               </button>
             </>
@@ -259,7 +281,10 @@ export default function ApplicationAdmin() {
           ))}
         </ul>
       </nav>
-      <main className="admin-content" style={{ marginLeft: sidebarCollapsed ? 60 : 0 }}>
+      <main
+        className="admin-content"
+        style={{ marginLeft: sidebarCollapsed ? 60 : 0 }}
+      >
         {activeSection === "createTimesheet" && (
           <div className="timesheet-page-content">
             <TimesheetForm onClose={() => setActiveSection("projects")} />
@@ -267,50 +292,65 @@ export default function ApplicationAdmin() {
         )}
         {activeSection === "viewTimesheets" && (
           <div className="timesheet-page-content">
-            <h2 className="view-title">
+            {/* <h2 className="view-title">
               <FaClipboardList /> View Timesheets
-            </h2>
+            </h2> */}
+
+            {/* --- NEW SEARCH BAR --- */}
             <div className="filter-bar">
-  <div className="filter-item">
-    <label>Foreman:</label>
-    <input
-      type="text"
-      placeholder="Enter Foreman Name"
-      value={searchForeman}
-      onChange={(e) => {
-        setSearchForeman(e.target.value);
-        setCurrentPage(1);
-      }}
-    />
-  </div>
+              <div className="styled-search-container">
+                <div className="search-wrapper">
+                  <div className="search-dropdown-wrapper">
+                    <select
+                      value={searchType}
+                      onChange={(e) => setSearchType(e.target.value)}
+                      className="search-dropdown"
+                    >
+                      <option value="foreman">Foreman</option>
+                      <option value="jobCode">Job Code</option>
+                    </select>
+                    <span className="dropdown-arrow">▼</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="What are you looking for..."
+                    className="search-input"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  />
+                  {/* <button
+                    className="camera-btn"
+                    title="Image search (not implemented)"
+                  >
+                    <FaCamera />
+                  </button> */}
+                </div>
+                <button className="search-submit-btn">
+                  <FaSearch />
+                  Search
+                </button>
+              </div>
 
-  <div className="filter-item">
-    <label>Job Code:</label>
-    <input
-      type="text"
-      placeholder="Enter Job Code"
-      value={searchJobCode}
-      onChange={(e) => {
-        setSearchJobCode(e.target.value);
-        setCurrentPage(1);
-      }}
-    />
-  </div>
-
-  <button
-    className="btn btn-outline btn-sm"
-    onClick={() => {
-      setSearchForeman("");
-      setSearchJobCode("");
-    }}
-  >
-    Clear Filters
-  </button>
-</div>
-
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchType("foreman");
+                  setCurrentPage(1);
+                }}
+              >
+                Clear Filter
+              </button>
+            </div>
+            {/* --- END NEW SEARCH BAR --- */}
 
             {error && <div className="alert alert-error">{error}</div>}
-            {successMessage && <div className="alert alert-success">{successMessage}</div>}
+            {successMessage && (
+              <div className="alert alert-success">{successMessage}</div>
+            )}
             {timesheets.length ? (
               <div className="timesheet-list-container">
                 <div className="timesheet-header-row">
@@ -332,7 +372,9 @@ export default function ApplicationAdmin() {
                       <span className="col date-col">
                         {new Date(ts.date).toLocaleDateString()}
                       </span>
-                      <span className="col foreman-col">{ts.foreman_name || "N/A"}</span>
+                      <span className="col foreman-col">
+                        {ts.foreman_name || "N/A"}
+                      </span>
                       <span className="col job-name-col">
                         {ts.job_name || ts.data?.job?.job_name || "N/A"}
                       </span>
@@ -385,7 +427,11 @@ export default function ApplicationAdmin() {
         )}
         {/* --- Global Alert Message --- */}
         {alertMessage && (
-          <div className={`alert ${alertType === "success" ? "alert-success" : "alert-error"}`}>
+          <div
+            className={`alert ${
+              alertType === "success" ? "alert-success" : "alert-error"
+            }`}
+          >
             {alertMessage}
           </div>
         )}

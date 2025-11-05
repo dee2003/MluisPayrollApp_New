@@ -18,20 +18,38 @@ class DeleteResponse(BaseModel):
 # ===============================
 #         USERS
 # ===============================
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List
+from .models import UserRole, ResourceStatus # Make sure enums are imported
+
+# --- User Schemas ---
 class UserBase(BaseModel):
+    id: int # Keep id here as your create form sends it
     username: str
     email: EmailStr
     first_name: str
     middle_name: Optional[str] = None
     last_name: str
-    role: str
+    role: UserRole
+    status: ResourceStatus = ResourceStatus.ACTIVE
 
 class UserCreate(UserBase):
     password: str
 
+# --- The Correct UserUpdate Schema ---
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    role: Optional[UserRole] = None
+    status: Optional[ResourceStatus] = None # Allows partial status updates
+
 class User(UserBase):
-    id: int
-    model_config = model_config
+    class Config:
+        from_attributes = True
+
 
 # ===============================
 #         EMPLOYEES
@@ -58,17 +76,13 @@ class Employee(EmployeeBase):
 class EquipmentBase(BaseModel):
     id: str
     name: str
-    # category: str  # <--- THIS IS THE FIX: Changed from 'type' to 'category'
     status: str
-    # department: Optional[str] = None
-    # category_number: Optional[str] = None
     vin_number: Optional[str] = None
     category_id: Optional[int]
     department_id: Optional[int]
     model_config = ConfigDict(from_attributes=True)
 
-# class EquipmentCreate(EquipmentBase): 
-#     pass
+# Original EquipmentCreate
 class EquipmentCreate(BaseModel):
     id: str
     name: str
@@ -77,35 +91,16 @@ class EquipmentCreate(BaseModel):
     vin_number: Optional[str] = None
     status: Optional[str] = None
 
-# class Equipment(EquipmentBase):
-#     model_config = model_config
+# Original EquipmentUpdate
 class EquipmentUpdate(EquipmentBase):
     pass
-# class EquipmentInDB(EquipmentBase):
-#     class Config:
-#         orm_mode = True
 
-from pydantic import BaseModel, ConfigDict
-
-# Nested schemas for related models
-class CategoryOut(BaseModel):
-    id: int
-    name: str
-    number: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class DepartmentOut(BaseModel):
-    id: int
-    name: Optional[str] = None
-
-    model_config = ConfigDict(from_attributes=True)
+# Original Category and Department Schemas for nesting
 class CategoryBase(BaseModel):
     id: int
     name: str
     number: str
-
+    
     class Config:
         orm_mode = True
 
@@ -115,10 +110,13 @@ class DepartmentBase(BaseModel):
 
     class Config:
         orm_mode = True
+
+# --- The Crucial Part ---
+# Restoring the original EquipmentInDB and Equipment schemas
 class EquipmentInDB(BaseModel):
     id: str
     name: str
-    vin_number: str
+    vin_number: Optional[str]
     status: str
     category_id: Optional[int]
     department_id: Optional[int]
@@ -127,12 +125,23 @@ class EquipmentInDB(BaseModel):
 
     class Config:
         orm_mode = True
+
 class Equipment(EquipmentBase):
     category_rel: Optional[CategoryBase]
     department_rel: Optional[DepartmentBase]
 
     class Config:
         orm_mode = True
+
+# --- New Schemas for Creating Department and Category ---
+# We still need these for the "Add New" feature
+
+class DepartmentCreate(BaseModel):
+    name: str
+
+class CategoryCreate(BaseModel):
+    name: str
+    number: str
 # ===============================
 #         MATERIALS
 # ===============================
@@ -190,6 +199,7 @@ class JobPhaseBase(BaseModel):
     project_engineer: Optional[str] = None     # 👈 keep existing
     status: ResourceStatus = ResourceStatus.ACTIVE
     phase_codes: List[str] = []
+    jurisdiction: Optional[str] = None         # ✅ add this line
 
 
 
@@ -581,3 +591,7 @@ class Supplier(SupplierBase):
     id: int
     class Config:
         orm_mode = True
+class TimesheetCountsResponse(BaseModel):
+    foreman: int
+    supervisor: int
+    project_engineer: int

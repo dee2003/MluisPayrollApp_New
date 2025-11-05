@@ -1,667 +1,16 @@
 
-
-
-
-
-
-// import React, { useState, useEffect } from "react";
-// import axios from "axios";
-// import CrewMappingManager from './CrewMappingManager';
-// import "./CrewMapping.css";
-// // Corrected: Cleaned up imports and added icons for sidebar toggle
-// import { FaUser, FaHardHat, FaTasks, FaBox, FaBriefcase, FaUsers, FaTrash, FaBars, FaTimes } from 'react-icons/fa';
-// import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
-// const API_URL = "http://127.0.0.1:8000/api";
-
-// // --- Reusable Modal Component (Unchanged) ---
-// const Modal = ({ title, children, onClose, size = "medium" }) => (
-//     <div className="modal">
-//         <div className={`modal-content ${size}`}>
-//             <div className="modal-header">
-//                 <h3>{title}</h3>
-//                 <button onClick={onClose} className="btn-sm btn-outline">×</button>
-//             </div>
-//             <div className="modal-body-scrollable">{children}</div>
-//         </div>
-//     </div>
-// );
-
-// // --- Notification & Confirmation Modals (Unchanged) ---
-// const NotificationModal = ({ message, onClose }) => (
-//     <div className="modal">
-//         <div className="modal-content small">
-//             <div className="modal-header">
-//                 <h3>Notification</h3>
-//                 <button onClick={onClose} className="btn-sm btn-outline">×</button>
-//             </div>
-//             <div className="modal-body"><p>{message}</p></div>
-//             <div className="modal-actions" style={{ justifyContent: 'center' }}>
-//                 <button onClick={onClose} className="btn btn-primary">OK</button>
-//             </div>
-//         </div>
-//     </div>
-// );
-
-// const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
-//     <div className="modal">
-//         <div className="modal-content small">
-//             <div className="modal-header">
-//                 <h3>Confirmation</h3>
-//                 <button onClick={onCancel} className="btn-sm btn-outline">×</button>
-//             </div>
-//             <div className="modal-body"><p>{message}</p></div>
-//             <div className="modal-actions">
-//                 <button onClick={onCancel} className="btn btn-outline">Cancel</button>
-//                 <button onClick={onConfirm} className="btn btn-danger">Confirm</button>
-//             </div>
-//         </div>
-//     </div>
-// );
-
-// const getIconForSection = (sec) => {
-//     switch(sec) {
-//         case "users": return <FaUser />;
-//         case "employees": return <FaUser />;
-//         case "equipment": return <FaHardHat />;
-//         case "job_phases": return <FaTasks />;
-//         case "materials": return <FaBox />;
-//         case "vendors": return <FaBriefcase />;
-//         case "crewMapping": return <FaUsers />;
-//         case "dumping_sites": return <FaTrash />;
-//         default: return <FaTasks />;
-//     }
-// };
-
-// // --- Generic Form Component (Unchanged) ---
-// const GenericForm = ({ fields, onSubmit, defaultValues, errorMessage }) => {
-//     const [values, setValues] = useState(() => {
-//         const initialValues = { ...defaultValues };
-//         fields.forEach(field => {
-//             if (initialValues[field.name] === undefined && field.defaultValue !== undefined) {
-//                 initialValues[field.name] = field.defaultValue;
-//             }
-//         });
-//         return initialValues;
-//     });
-//     const [errors, setErrors] = useState({});
-
-//     const validateField = (name, value) => {
-//         let error = "";
-//         const field = fields.find(f => f.name === name);
-//         if (field?.required && !value) {
-//             error = `${field.label} is required.`;
-//         }
-//         setErrors(prev => ({ ...prev, [name]: error }));
-//         return error;
-//     };
-
-//     const handleChange = e => {
-//         const { name, value } = e.target;
-//         setValues(prev => ({ ...prev, [name]: value }));
-//         validateField(name, value);
-//     };
-
-//     const handleSubmit = e => {
-//         e.preventDefault();
-//         let newErrors = {};
-//         fields.forEach(f => {
-//             const error = validateField(f.name, values[f.name]);
-//             if (error) newErrors[f.name] = error;
-//         });
-//         setErrors(newErrors);
-//         if (Object.keys(newErrors).length === 0) onSubmit(values);
-//     };
-
-//     return (
-//         <form onSubmit={handleSubmit}>
-//             {errorMessage && (<div className="form-error-top">{errorMessage}</div>)}
-//             {fields.map(field => (
-//                 <div className="form-group" key={field.name}>
-//                     <label className="form-label">{field.label}</label>
-//                     {field.type === "select" ? (
-//                         <select name={field.name} className="form-control" value={values[field.name] || ""} onChange={handleChange}>
-//                             {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-//                         </select>
-//                     ) : (
-//                         <input
-//                             type={field.type || "text"}
-//                             name={field.name}
-//                             className="form-control"
-//                             value={values[field.name] || ""}
-//                             onChange={handleChange}
-//                             required={field.required}
-//                             autoComplete={field.type === "password" ? "new-password" : "off"}
-//                         />
-//                     )}
-//                     {errors[field.name] && <small style={{ color: "red", fontSize: "12px" }}>{errors[field.name]}</small>}
-//                 </div>
-//             ))}
-//             <div className="modal-actions">
-//                 <button type="submit" className="btn btn-primary">Save</button>
-//             </div>
-//         </form>
-//     );
-// };
-
-// // --- Job & Phases Components (Unchanged) ---
-// const JobPhasesTable = ({ phases, onEdit, onDelete }) => (
-//     <table className="data-table">
-//         <thead><tr><th>Phase Code</th><th>Actions</th></tr></thead>
-//         <tbody>
-//             {phases.map((p, i) => (
-//                 <tr key={`${p.phase_code}-${i}`}>
-//                     <td>{p.phase_code}</td>
-//                     <td>
-//                         <button onClick={() => onEdit(i)} className="btn btn-sm">Edit</button>
-//                         <button onClick={() => onDelete(i)} className="btn btn-sm btn-outline">Delete</button>
-//                     </td>
-//                 </tr>
-//             ))}
-//         </tbody>
-//     </table>
-// );
-
-// const JobWithPhasesModal = ({ mode, job, onSave, onClose, showNotification }) => {
-//     const [jobCode, setJobCode] = useState(job?.job_code || "");
-//     const [contractNo, setContractNo] = useState(job?.contract_no || "");
-//     const [jobDescription, setJobDescription] = useState(job?.job_description || "");
-//     const [projectEngineer, setProjectEngineer] = useState(job?.project_engineer || "");
-//     const [jurisdiction, setJurisdiction] = useState(job?.jurisdiction || "");
-//     const [status, setStatus] = useState(job?.status || "Active");
-//     const [phaseCode, setPhaseCode] = useState("");
-//     const [phases, setPhases] = useState(job?.phases || []);
-//     const [editIdx, setEditIdx] = useState(null);
-//     const fixedPhases = ["Admin", "S&SL", "Vacation"];
-
-//     const handleAddPhase = () => {
-//         if (!phaseCode.trim()) return showNotification("Please enter a phase code.");
-//         if (phases.some((p, idx) => p.phase_code === phaseCode.trim() && idx !== editIdx))
-//             return showNotification("This phase code already exists.");
-//         if (editIdx !== null) {
-//             setPhases(phases.map((p, i) => (i === editIdx ? { phase_code: phaseCode.trim() } : p)));
-//             setEditIdx(null);
-//         } else {
-//             setPhases([...phases, { phase_code: phaseCode.trim() }]);
-//         }
-//         setPhaseCode("");
-//     };
-
-//     const handleEditPhase = (idx) => {
-//         setPhaseCode(phases[idx].phase_code);
-//         setEditIdx(idx);
-//     };
-
-//     const handleDeletePhase = (idx) => {
-//         setPhases(phases.filter((_, i) => i !== idx));
-//     };
-
-//     const handleSubmit = () => {
-//         if (!jobCode.trim()) return showNotification("Job code is a required field.");
-//         const finalPhaseCodes = [...new Set([...phases.map(p => p.phase_code), ...fixedPhases])];
-//         const jobData = { job_code: jobCode.trim(), contract_no: contractNo.trim(), job_description: jobDescription.trim(), project_engineer: projectEngineer.trim(), jurisdiction: jurisdiction.trim(), status, phases: finalPhaseCodes };
-//         onSave(jobData);
-//     };
-
-//     return (
-//         <Modal title={mode === "edit" ? "Edit Job & Phases" : "Create Job & Phases"} onClose={onClose} size="large">
-//             <div className="form-grid">
-//                 <div className="form-group"><label>Job Code</label><input type="text" value={jobCode} onChange={(e) => setJobCode(e.target.value)} disabled={mode === "edit"} className="form-control" required /></div>
-//                 <div className="form-group"><label>Contract No.</label><input type="text" value={contractNo} onChange={(e) => setContractNo(e.target.value)} className="form-control" /></div>
-//                 <div className="form-group"><label>Project Engineer</label><input type="text" value={projectEngineer} onChange={(e) => setProjectEngineer(e.target.value)} className="form-control" /></div>
-//                 <div className="form-group"><label>Jurisdiction</label><input type="text" value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} className="form-control" /></div>
-//                 <div className="form-group full-width"><label>Job Description</label><textarea value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} className="form-control" rows="3"></textarea></div>
-//                 <div className="form-group"><label>Status</label><select value={status} onChange={(e) => setStatus(e.target.value)} className="form-control"><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
-//             </div>
-//             <hr style={{ margin: "16px 0" }} />
-//             <h4>Editable Phases</h4>
-//             <div className="phases-table-wrapper"><JobPhasesTable phases={phases} onEdit={handleEditPhase} onDelete={handleDeletePhase} /></div>
-//             <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-//                 <input type="text" value={phaseCode} onChange={(e) => setPhaseCode(e.target.value)} placeholder="New Phase Code" className="form-control" />
-//                 <button type="button" onClick={handleAddPhase} className="btn">{editIdx !== null ? "Update" : "Add"}</button>
-//                 {editIdx !== null && (<button type="button" onClick={() => { setEditIdx(null); setPhaseCode(""); }} className="btn btn-outline">Cancel</button>)}
-//             </div>
-//             <div style={{ marginTop: "16px" }}><h4>Fixed Phases</h4><ul className="fixed-phases-list">{fixedPhases.map(p => <li key={p}>{p}</li>)}</ul></div>
-//             <div className="modal-actions"><button onClick={handleSubmit} className="btn btn-primary">Save Job</button></div>
-//         </Modal>
-//     );
-// };
-
-// const JobPhasesViewModal = ({ job, onClose }) => (
-//     <Modal title={`Phases for ${job.job_code}`} onClose={onClose}>
-//         <table className="data-table">
-//             <thead><tr><th>Phase Code</th></tr></thead>
-//             <tbody>{(job.phase_codes || []).map((phase, idx) => (<tr key={idx}><td>{phase}</td></tr>))}</tbody>
-//         </table>
-//     </Modal>
-// );
-
-// // --- Main Admin Dashboard Component ---
-// const AdminDashboard = ({ data: initialData, onLogout }) => {
-//     // MODIFIED: Robust state initialization to guarantee all keys exist.
-//     const [data, setData] = useState(() => {
-//         const defaults = {
-//             users: [], employees: [], equipment: [], job_phases: [], 
-//             materials: [], vendors: [], dumping_sites: []
-//         };
-//         return { ...defaults, ...(initialData || {}) };
-//     });
-
-//     const [activeSection, setActiveSection] = useState("users");
-//     const [modal, setModal] = useState({ shown: false, type: "", title: "", mode: "add", item: null });
-//     const [jobModal, setJobModal] = useState({ shown: false, mode: "", job: null });
-//     const [viewPhasesJob, setViewPhasesJob] = useState(null);
-//     const [notification, setNotification] = useState({ shown: false, message: "" });
-//     const [confirmation, setConfirmation] = useState({ shown: false, message: "", onConfirm: () => {} });
-//     const [formError, setFormError] = useState("");
-//     const [isLoading, setIsLoading] = useState(true);
-//     const [fetchError, setFetchError] = useState(null);
-//     const showNotification = (message) => setNotification({ shown: true, message });
-//     const showConfirmation = (message, onConfirmAction) => setConfirmation({ shown: true, message, onConfirm: () => {
-//         onConfirmAction();
-//         setConfirmation({ shown: false, message: "", onConfirm: () => {} });
-//     }});
-
-//     const closeMainModal = () => {
-//         setModal({ shown: false, type: "", title: "", mode: "add", item: null });
-//         setFormError("");
-//     };
-// const API_ENDPOINTS = [
-//         "users", "employees", "equipment", "materials", 
-//         "vendors", "dumping_sites", "job-phases"
-//     ];
-//     const [sidebarWidth, setSidebarWidth] = useState(220);
-//     const [isResizing, setIsResizing] = useState(false);
-//     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-//     const [currentDate, setCurrentDate] = useState("");
-// useEffect(() => {
-//         const fetchData = async () => {
-//             setIsLoading(true);
-//             setFetchError(null);
-//             const newData = {};
-//             let hasError = false;
-
-//             for (const endpoint of API_ENDPOINTS) {
-//                 try {
-//                     const response = await axios.get(`${API_URL}/${endpoint}`);
-//                     // Map job-phases back to job_phases key for state consistency
-//                     const key = endpoint === 'job-phases' ? 'job_phases' : endpoint;
-//                     newData[key] = response.data;
-//                 } catch (error) {
-//                     // Log the error but continue trying to fetch other data
-//                     console.error(`Error fetching ${endpoint}:`, error);
-//                     setFetchError(`Failed to load data for ${endpoint}.`);
-//                     hasError = true;
-//                 }
-//             }
-
-//             if (!hasError) {
-//                 setData(newData); // Replace initial state with fetched data
-//             }
-//             setIsLoading(false);
-//         };
-        
-//         fetchData();
-//     }, []);
-
-//     useEffect(() => {
-//         const now = new Date();
-//         const options = { weekday: "long", year: "numeric", month: "long", day: "numeric" };
-//         setCurrentDate(now.toLocaleDateString(undefined, options));
-//     }, []);
-
-//     useEffect(() => {
-//         const handleMouseMove = (e) => {
-//             if (isResizing) {
-//                 const newWidth = Math.max(60, Math.min(e.clientX, 400));
-//                 setSidebarWidth(newWidth);
-//             }
-//         };
-//         const handleMouseUp = () => { if (isResizing) setIsResizing(false); };
-//         window.addEventListener("mousemove", handleMouseMove);
-//         window.addEventListener("mouseup", handleMouseUp);
-//         return () => {
-//             window.removeEventListener("mousemove", handleMouseMove);
-//             window.removeEventListener("mouseup", handleMouseUp);
-//         };
-//     }, [isResizing]);
-
-//     const typeToStateKey = { user: "users", employee: "employees", equipment: "equipment", job_phase: "job_phases", material: "materials", vendor: "vendors", dumping_site: "dumping_sites" };
-
-//     const onUpdate = (key, newList) => setData(prev => ({ ...prev, [key]: newList }));
-
-//     const handleSaveJob = async (jobData) => {
-//         const { job_code, phases, ...otherJobData } = jobData;
-//         const payload = { ...otherJobData, job_code, phase_codes: phases };
-//         const isEditMode = jobModal.mode === 'edit';
-//         const url = isEditMode ? `${API_URL}/job-phases/${encodeURIComponent(job_code)}` : `${API_URL}/job-phases/`;
-//         const apiCall = isEditMode ? axios.put : axios.post;
-//         try {
-//             const response = await apiCall(url, payload);
-//             setData(prev => {
-//                 const updatedJobs = [...(prev.job_phases || [])];
-//                 const existingIndex = updatedJobs.findIndex(j => j.job_code === job_code);
-//                 if (existingIndex !== -1) updatedJobs[existingIndex] = response.data;
-//                 else updatedJobs.push(response.data);
-//                 return { ...prev, job_phases: updatedJobs };
-//             });
-//             setJobModal({ shown: false, mode: "", job: null });
-//         } catch (err) {
-//             const errorMessage = err.response?.data?.detail ? JSON.stringify(err.response.data.detail) : err.message;
-//             showNotification(`Error saving job: ${errorMessage}`);
-//         }
-//     };
-
-//     // MODIFIED: Re-applied the critical safety check `|| []`
-//     const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) => {
-//         const stateKey = typeToStateKey[type];
-//         setFormError("");
-
-//         if (mode === "add") {
-//             const idKey = (type === 'user') ? 'username' : 'id';
-//             const newItemId = itemData[idKey];
-//             // THIS IS THE FIX: Always use a fallback empty array.
-//             if ((data[stateKey] || []).some(item => item[idKey] === newItemId)) {
-//                 const itemType = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-//                 setFormError(`${itemType} with ID '${newItemId}' already exists.`);
-//                 return;
-//             }
-//         }
-
-//         try {
-//             let response;
-//             if (mode === "edit" && existingItem) {
-//                 const itemId = existingItem.id;
-//                 response = await axios.put(`${API_URL}/${stateKey}/${encodeURIComponent(itemId)}`, itemData);
-//                 onUpdate(stateKey, (data[stateKey] || []).map(it => it.id === itemId ? response.data : it));
-//             } else {
-//                 response = await axios.post(`${API_URL}/${stateKey}/`, itemData);
-//                 onUpdate(stateKey, [response.data, ...(data[stateKey] || [])]);
-//             }
-//             closeMainModal();
-//         } catch (error) {
-//             const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : "An unexpected error occurred.";
-//             setFormError(`Error: ${errorMessage}`);
-//         }
-//     };
-//     // ✅ Toggle Active / Inactive status
-// const handleToggleStatus = async (type, item) => {
-//   const stateKey = typeToStateKey[type];
-//   const newStatus = item.status === "Active" ? "Inactive" : "Active";
-//   const updatedItem = { ...item, status: newStatus };
-
-//   try {
-//     const response = await axios.put(
-//       `${API_URL}/${stateKey}/${encodeURIComponent(item.id)}`,
-//       updatedItem
-//     );
-
-//     // Update the local state
-//     onUpdate(
-//       stateKey,
-//       (data[stateKey] || []).map((it) =>
-//         it.id === item.id ? response.data : it
-//       )
-//     );
-//   } catch (error) {
-//     console.error("Error toggling status:", error);
-//     const errorMessage = error.response?.data
-//       ? JSON.stringify(error.response.data)
-//       : "An unexpected error occurred.";
-//     alert(`Error updating status: ${errorMessage}`);
-//   }
-// };
-
-
-
-//     const handleDeleteItem = async (type, itemId) => {
-//         const deleteAction = async () => {
-//             const urlKey = type === 'job_phase' ? 'job-phases' : typeToStateKey[type];
-//             const dataKey = type === 'job_phase' ? 'job_phases' : typeToStateKey[type];
-//             try {
-//                 const url = `${API_URL}/${urlKey}/${encodeURIComponent(itemId)}`;
-//                 await axios.delete(url);
-//                 const idKey = type === 'job_phase' ? 'job_code' : 'id';
-//                 onUpdate(dataKey, (data[dataKey] || []).filter(item => item[idKey] !== itemId));
-//             } catch (error) {
-//                 const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : error.message;
-//                 showNotification(`Error deleting ${type}: ${errorMessage}`);
-//             }
-//         };
-//         const itemLabel = type.replace('_', ' ');
-//         showConfirmation(`Are you sure you want to delete this ${itemLabel}?`, deleteAction);
-//     };
-
-//     // Corrected: Fixed misplaced case statement
-//     const getFormFields = (type) => {
-//         switch (type) {
-//             case "user": return [ { name: "username", label: "Username", required: true }, { name: "first_name", label: "First Name", required: true }, { name: "middle_name", label: "Middle Name" }, { name: "last_name", label: "Last Name", required: true }, { name: "email", label: "Email", required: true, type: "email" }, { name: "password", label: "Password", type: "password", required: true }, { name: "role", label: "Role", type: "select", options: [ { value: "foreman", label: "Foreman" }, { value: "supervisor", label: "Supervisor" }, { value: "project_engineer", label: "Project Engineer" }, { value: "admin", label: "Accountant" } ], required: true, defaultValue: "admin" } ];
-//             case "employee": return [ { name: "id", label: "Employee ID", required: true }, { name: "first_name", label: "First Name", required: true }, { name: "middle_name", label: "Middle Name" }, { name: "last_name", label: "Last Name", required: true }, { name: "class_1", label: "Class Code 1" }, { name: "class_2", label: "Class Code 2" }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
-//             case "equipment": return [ { name: "id", label: "Equipment ID", required: true }, { name: "name", label: "Equipment Name", required: true }, { name: "type", label: "Category Name" }, { name: "department", label: "Department", required: true }, { name: "category_number", label: "Category Number", required: true }, { name: "vin_number", label: "VIN Number" }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
-//             case "vendor": return [ { name: "name", label: "Work Performed Name", required: true }, { name: "unit", label: "Unit", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
-//             case "material": return [ { name: "name", label: "Material/Trucking Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
-//             case "dumping_site": return [ { name: "id", label: "Site ID", required: true }, { name: "name", label: "Site Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
-//             default: return [];
-//         }
-//     };
-
-//     const prepareJobForEditModal = (job) => {
-//         const fixedPhases = ["Admin", "S&SL", "Vacation"];
-//         const phaseCodes = job.phase_codes || [];
-//         return { ...job, phases: phaseCodes.filter(p => !fixedPhases.includes(p)).map(p => ({ phase_code: p })) };
-//     };
-// const formatRole = (role) => {
-//         if (!role) return "";
-//         return role
-//             .split('_') 
-//             .map(word => 
-//                 word.charAt(0).toUpperCase() + word.slice(1)
-//             )
-//             .join(' ');
-//     };
-//     const renderSection = () => {
-//         const makeTable = (type, title, headers, rowRender, itemLabel) => {
-//             const label = itemLabel || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-//             const key = typeToStateKey[type];
-//             return (<DataTableSection title={title} headers={headers} data={data[key] || []} renderRow={(item) => <>{rowRender(item)}</>} onAdd={() => setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })} onEdit={item => setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })} onDelete={id => handleDeleteItem(type, id)} />);
-//         };
-//         switch (activeSection) {
-//             case "users": 
-//                 return makeTable(
-//                     "user", 
-//                     "User Management", 
-//                     ["Username", "First Name", "Last Name", "Role"], 
-//                     u => (
-//                         <>
-//                             <td key={u.username}>{u.username}</td>
-//                             <td key={u.first_name}>{u.first_name}</td>
-//                             <td key={u.last_name}>{u.last_name}</td>
-//                             {/* 🎯 MODIFIED: Apply formatting to the role here */}
-//                             <td key={u.role}>{formatRole(u.role)}</td>
-//                         </>
-//                     )
-//                 );
-//             case "employees": 
-//     return makeTable("employee", "Employee Management", ["ID", "Name", "Class", "Status"], e => {
-//         // Construct the full name: First Name [Middle Name ] Last Name
-//         const fullName = `${e.first_name} ${e.middle_name ? e.middle_name + ' ' : ''}${e.last_name}`;
-        
-//         return (<> 
-//             <td key={e.id}>{e.id}</td> 
-//             {/* 🎯 FIX APPLIED HERE */}
-//             <td key={fullName}>{fullName}</td> 
-//             <td key={e.class_1}>{`${e.class_1 || ""}${e.class_2 ? " / " + e.class_2 : ""}`}</td> 
-//             <td key={e.status}>{e.status}</td> 
-//         </>);
-//     });
-//             case "equipment": return makeTable("equipment", "Equipment Management", ["ID", "Name", "Category Name", "Department", "Category No.", "VIN No.", "Status"], e => (<> <td key={e.id}>{e.id}</td> <td key={e.name}>{e.name}</td> <td key={e.type}>{e.type}</td> <td key={e.department}>{e.department}</td> <td key={e.category_number}>{e.category_number}</td> <td key={e.vin_number}>{e.vin_number}</td> <td key={e.status}>{e.status}</td> </>));
-//             case "vendors": return makeTable("vendor", "Work Performed", ["Name", "Unit", "Status"], v => <><td key={v.name}>{v.name}</td><td key={v.unit}>{v.unit}</td><td key={v.status}>{v.status}</td></>, "Work Performed");
-//             case "materials": return makeTable("material", "Materials and Trucking", ["Name", "Status"], m => <><td key={m.name}>{m.name}</td><td key={m.status}>{m.status}</td></>, "Material and Trucking");
-//             case "job_phases": return (<DataTableSection title="Jobs & Phases Management" headers={["Job Code", "Description", "Project Engineer", "Status"]} data={data.job_phases || []} renderRow={job => (<> <td>{job.job_code}</td> <td>{job.job_description}</td> <td>{job.project_engineer}</td> <td>{job.status}</td> </>)} onAdd={() => setJobModal({ shown: true, mode: "add", job: null })} onEdit={(job) => setJobModal({ shown: true, mode: "edit", job: prepareJobForEditModal(job) })} onDelete={(job_code) => handleDeleteItem("job_phase", job_code)} extraActions={(job) => (<button className="btn btn-view btn-sm" onClick={() => setViewPhasesJob(job)}> View Phases </button>)} />);
-//             case "dumping_sites": return makeTable("dumping_site", "Dumping Site Management", ["Site ID", "Site Name", "Status"], ds => (<><td key={ds.id}>{ds.id}</td><td key={ds.name}>{ds.name}</td><td key={ds.status}>{ds.status}</td></>), "Dumping Site");
-//             case "crewMapping": 
-//                 const allResources = { 
-//                     users: data.users || [], employees: data.employees || [], equipment: data.equipment || [], 
-//                     materials: data.materials || [], vendors: data.vendors || [], dumping_sites: data.dumping_sites || []
-//                 }; 
-//                 return <CrewMappingManager allResources={allResources} />;
-//             default: return <div>Section not implemented.</div>;
-//         }
-//     };
-
-//     return (
-//         <div className="admin-layout">
-//             {notification.shown && <NotificationModal message={notification.message} onClose={() => setNotification({ shown: false, message: "" })} />}
-//             {confirmation.shown && <ConfirmationModal message={confirmation.message} onConfirm={confirmation.onConfirm} onCancel={() => setConfirmation({ shown: false, message: "", onConfirm: () => {} })} />}
-
-//             {modal.shown && (
-//                 <Modal title={modal.title} onClose={closeMainModal}>
-//                     <GenericForm
-//                         fields={getFormFields(modal.type)}
-//                         defaultValues={modal.item || {}}
-//                         onSubmit={(formData) => handleAddOrUpdateItem(modal.type, formData, modal.mode, modal.item)}
-//                         errorMessage={formError}
-//                     />
-//                 </Modal>
-//             )}
-
-//             {viewPhasesJob && <JobPhasesViewModal job={viewPhasesJob} onClose={() => setViewPhasesJob(null)} />}
-//             {jobModal.shown && <JobWithPhasesModal mode={jobModal.mode} job={jobModal.job} onSave={handleSaveJob} onClose={() => setJobModal({ shown: false, mode: "", job: null })} showNotification={showNotification} />}
-
-            
-
-// {/* 🎯 MODIFIED: Sidebar Structure with Standard Toggle Button */}
-// <nav
-//   className={`admin-sidebar ${sidebarCollapsed ? "collapsed" : ""}`}
-//   style={{ width: sidebarCollapsed ? 60 : sidebarWidth }}
-// >
-//   {/* 🔝 Top-right toggle button */}
-//   <div className="sidebar-top">
-//     <button
-//       onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-//       className="btn btn-outline btn-sm toggle-sidebar"
-//       title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-//     >
-//       {sidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-//     </button>
-//   </div>
-// <div className="sidebar-header">
-//     {/* Sidebar title (visible only when expanded) */}
-//     {!sidebarCollapsed && <h3 className="sidebar-title">ADMIN PORTAL</h3>}
-     
-//     {/* Date & Logout (visible only when expanded) */}
-//     {!sidebarCollapsed && (
-//       <>
-//         <div className="current-date">{currentDate}</div>
-//         <button
-//           onClick={onLogout}
-//           className="btn btn-outline btn-sm logout-btn"
-//         >
-//           Logout
-//         </button>
-//       </>
-//     )}
-//   </div>
-
-//   {/* Navigation List */}
-//   <ul className="sidebar-nav">
-//     {[
-//       "users",
-//       "employees",
-//       "equipment",
-//       "job_phases",
-//       "materials",
-//       "vendors",
-//       "dumping_sites",
-//       "crewMapping",
-//     ].map((sec) => (
-//       <li key={sec}>
-//         <button
-//           onClick={() => setActiveSection(sec)}
-//           className={activeSection === sec ? "active" : ""}
-//         >
-//           <span className="icon">{getIconForSection(sec)}</span>
-//           {!sidebarCollapsed && (
-//             <span className="label">
-//               {sec === "job_phases"
-//                 ? "Jobs & Phases"
-//                 : sec === "crewMapping"
-//                 ? "Crew Mapping"
-//                 : sec === "vendors"
-//                 ? "Work Performed"
-//                 : sec === "materials"
-//                 ? "Materials & Trucking"
-//                 : sec === "dumping_sites"
-//                 ? "Dumping Sites"
-//                 : sec.charAt(0).toUpperCase() + sec.slice(1)}
-//             </span>
-//           )}
-//         </button>
-//       </li>
-//     ))}
-//   </ul>
-
-
-
-//                 {/* Resizer is still visible only when not collapsed */}
-//                 {!sidebarCollapsed && (<div className="sidebar-resizer" onMouseDown={() => setIsResizing(true)}/>)}
-//             </nav>
-//            <main
-//   className="admin-content"
-//   style={{ marginLeft: sidebarCollapsed ? 0 : sidebarWidth - 220 }}
-// >
-//   {renderSection()}
-// </main>
-
-//             {/* <main className="admin-content" style={{ marginLeft: sidebarCollapsed ? 60 : sidebarWidth }}>{renderSection()}</main> */}
-//         </div>
-//     );
-// };
-
-// // Data Table Component is unchanged
-// const DataTableSection = ({ title, headers, data = [], renderRow, onDelete, onAdd, onEdit, extraActions }) => (
-//     <div className="data-table-container">
-//         <div className="section-header"><h2>{title}</h2>{onAdd && <button onClick={onAdd} className="btn btn-primary">Add New</button>}</div>
-//         <table className="data-table">
-//             <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}<th>Actions</th></tr></thead>
-//             <tbody>
-//                 {data.map(item => (
-//                     <tr key={item.id || item.job_code || item.username}>
-//                         {renderRow(item)}
-//                         <td>
-//                             {onEdit && <button onClick={() => onEdit(item)} className="btn-edit btn-sm">Edit</button>}
-// {item.status && (
-//   <button
-//     onClick={() => handleToggleStatus(activeSection, item)}
-//     className={`btn-sm ${
-//       item.status === "Active" ? "btn-outline-danger" : "btn-outline-success"
-//     }`}
-//   >
-//     {item.status === "Active" ? "Deactivate" : "Activate"}
-//   </button>
-// )}
-//                             {extraActions && extraActions(item)}
-//                         </td>
-//                     </tr>
-//                 ))}
-//             </tbody>
-//         </table>
-//     </div>
-// );
-
-// export default AdminDashboard;
-
-
-
-
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import CrewMappingManager from './CrewMappingManager';
 import "./CrewMapping.css";
 // Corrected: Cleaned up imports and added icons for sidebar toggle
-import { FaUser, FaHardHat, FaTasks, FaBox, FaBriefcase, FaUsers, FaTrash, FaBars, FaTimes } from 'react-icons/fa';
+import { FaUser, FaHardHat, FaTasks, FaBox, FaBriefcase, FaUsers, FaTrash, FaBars, FaTimes,FaTachometerAlt  } from 'react-icons/fa';
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import TimesheetCounts from './TimesheetCounts';
 
 const API_URL = "http://127.0.0.1:8000/api";
+const ITEMSPERPAGE = 2; // You can change 10 to any number you like
+
 // Pagination controls component (reusable)
 const PaginationControls = ({ currentPage, totalPages, onPaginate }) => {
   if (totalPages <= 1) return null;
@@ -748,10 +97,11 @@ const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
 
 const getIconForSection = (sec) => {
     switch(sec) {
+        case 'dashboard': return <FaTachometerAlt />; // <= ADD THIS CASE
         case "users": return <FaUser />;
         case "employees": return <FaUser />;
         case "equipment": return <FaHardHat />;
-        case "job_phases": return <FaTasks />;
+        case "job-phases": return <FaTasks />;
         case "materials": return <FaBox />;
         case "vendors": return <FaBriefcase />;
         case "crewMapping": return <FaUsers />;
@@ -761,8 +111,10 @@ const getIconForSection = (sec) => {
 };
 
 // --- Generic Form Component (Unchanged) ---
-const GenericForm = ({ fields, onSubmit, defaultValues = {}, errorMessage,categories = [] }) => {
+const GenericForm = ({ fields, onSubmit, defaultValues = {}, errorMessage, genericErrorMessage, categories = [] }) => {
     const [formData, setFormData] = useState(defaultValues);
+    const [errors, setErrors] = useState({}); // Add this state for inline errors
+
     const [values, setValues] = useState(() => {
         const initialValues = { ...defaultValues };
         fields.forEach(field => {
@@ -772,7 +124,6 @@ const GenericForm = ({ fields, onSubmit, defaultValues = {}, errorMessage,catego
         });
         return initialValues;
     });
-    const [errors, setErrors] = useState({});
 
 
     const validateField = (name, value) => {
@@ -792,27 +143,48 @@ const GenericForm = ({ fields, onSubmit, defaultValues = {}, errorMessage,catego
     // };
 const handleChange = (e) => {
   if (!e || !e.target) return; // prevent crash
-  const name = e.target.name;
-  const value = e.target.value;
+  const { name, value } = e.target;
+let error = '';
+  let processedValue = value; // This will be the cleaned value
+      let newValues = { ...values, [name]: value };
 
-  // When category number changes
-  if (name === "category_number") {
-    const selectedCategory = categories.find(c => c.number === value);
-    setValues(prev => ({
-      ...prev,
-      category_number: value,
-      category: selectedCategory ? selectedCategory.name : "",
-      category_id: selectedCategory ? selectedCategory.id : null,
-    }));
-  } else {
-    setValues(prev => ({
-      ...prev,
-      [name]: value
-    }));
+   if (name === 'firstname' || name === 'lastname') {
+    // If the input contains a number...
+    if (/[0-9]/.test(value)) {
+      error = 'Only characters are allowed.'; // Set the error message
+    }
+    // This line automatically removes any numbers the user types
+    processedValue = value.replace(/[0-9]/g, '');
   }
+
+  // Update the input's value with the cleaned text
+  setValues((prev) => ({ ...prev, [name]: processedValue }));
+  // Update the error state for this specific field
+  setErrors((prev) => ({ ...prev, [name]: error }));
+  // When category number changes
+if (name === 'categorynumber') {
+      const selectedCategory = categories.find(c => c.number === value);
+      if (selectedCategory) {
+        newValues = {
+          ...newValues,
+          category: selectedCategory.name,
+        categoryid: selectedCategory.id    // Always use 'categoryid' (lowercase 'd')
+        };
+      } else {
+        newValues = { ...newValues, category: '',categoryid: null };
+      }
+    }
+        setValues(newValues);
+
   validateField(name, value);
 };
 
+// Add this inside the GenericForm component
+useEffect(() => {
+  if (errorMessage) {
+    setErrors(prev => ({ ...prev, ...errorMessage }));
+  }
+}, [errorMessage]);
 
 const handleSubmit = e => {
   e.preventDefault();
@@ -849,37 +221,68 @@ const handleSubmit = e => {
 };
 
 
-    return (
-        <form onSubmit={handleSubmit}>
-            {errorMessage && (<div className="form-error-top">{errorMessage}</div>)}
-            {fields.map(field => (
-                <div className="form-group" key={field.name}>
-                    <label className="form-label">{field.label}</label>
-                    {field.type === "select" ? (
-                        <select name={field.name} className="form-control" value={values[field.name] || ""} onChange={handleChange}>
-                            {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                        </select>
-                    ) : (
-                        <input
-                            type={field.type || "text"}
-                            name={field.name}
-                            className="form-control"
-                            value={values[field.name] || ""}
-                            // onChange={(e) => handleChange(e.target.name, e.target.value)}
-                            onChange={handleChange}
-                            required={field.required}
-                            readOnly={field.readOnly || false} 
-                            autoComplete={field.type === "password" ? "new-password" : "off"}
-                        />
+return (
+    <form onSubmit={handleSubmit}>
+        {genericErrorMessage && <div className="form-error-top">{genericErrorMessage}</div>}
+        
+        {fields.map(field => (
+            <div className="form-group" key={field.name}>
+                <label className="form-label">
+                    {field.label}
+                    {field.required && <span style={{ color: 'red' }}> *</span>}
+                </label>
+
+                {/* This wrapper aligns the input and the "Add New" button side-by-side */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+
+                    {/* This div makes the input/select take up the available space */}
+                    <div style={{ flex: 1 }}>
+                        {field.type === "select" ? (
+                            <select name={field.name} className="form-control" value={values[field.name] || ""} onChange={handleChange}>
+                                {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                        ) : (
+                            <input
+                                type={field.type || "text"}
+                             
+                                name={field.name}
+                                className="form-control"
+                                value={values[field.name] || ""}
+                                onChange={handleChange}
+                                required={field.required}
+                                readOnly={field.readOnly || false}
+
+                                autoComplete={field.type === "password" ? "new-password" : "off"}
+                            />
+                        )}
+                    </div>
+
+                    {/* --- CHANGE IS HERE --- */}
+                    {/* This code checks if a field should have an "Add New" button and renders it */}
+                    {field.onAddNew && (
+                        <button
+                            type="button"
+                            onClick={field.onAddNew}
+                            className="btn btn-sm btn-outline"
+                            style={{ whiteSpace: 'nowrap' }} // Keeps "Add New" on one line
+                        >
+                            Add New
+                        </button>
                     )}
-                    {errors[field.name] && <small style={{ color: "red", fontSize: "12px" }}>{errors[field.name]}</small>}
+                    {/* --- END OF CHANGE --- */}
+
                 </div>
-            ))}
-            <div className="modal-actions">
-                <button type="submit" className="btn btn-primary">Save</button>
+
+                {errors[field.name] && <small style={{ color: 'red', fontSize: '12px' }}>{errors[field.name]}</small>}
             </div>
-        </form>
-    );
+        ))}
+        
+        <div className="modal-actions">
+            <button type="submit" className="btn btn-primary">Save</button>
+        </div>
+    </form>
+);
+
 };
 
 // --- Job & Phases Components (Unchanged) ---
@@ -910,6 +313,7 @@ const JobWithPhasesModal = ({ mode, job, onSave, onClose, showNotification }) =>
     const [jurisdiction, setJurisdiction] = useState(job?.jurisdiction || "");
 const [projectEngineerId, setProjectEngineerId] = useState('');
 
+
     // ✅ FIX: Ensure status is always handled in lowercase for the backend
     const [status, setStatus] = useState(job?.status?.toLowerCase() || "active"); 
     
@@ -921,11 +325,29 @@ const [projectEngineerId, setProjectEngineerId] = useState('');
  const [engineers, setEngineers] = useState([]);
 
 useEffect(() => {
-  fetch("http://localhost:8000/api/users?role=Project%20Engineer")
-    .then((res) => res.json())
-    .then((data) => setEngineers(data))
-    .catch((err) => console.error("Error fetching engineers:", err));
+  fetch("http://localhost:8000/api/project-engineer/")
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then((data) => {
+      if (Array.isArray(data)) {
+        const activeEngineers = data.filter(engineer => engineer.status.toLowerCase() === 'active');
+
+        setEngineers(activeEngineers); 
+      } else {
+        console.error("Unexpected response:", data);
+        setEngineers([]); // fallback to empty array
+      }
+    })
+    .catch((err) => {
+      console.error("Error fetching engineers:", err);
+      setEngineers([]); // fallback to avoid crash
+    });
 }, []);
+
 
   useEffect(() => {
     axios.get(`${API_URL}/locations/`)
@@ -1002,31 +424,31 @@ useEffect(() => {
       </div>
 <div className="form-group">
   <label>Project Engineer</label>
-  <select
-    value={projectEngineerId || ''}   // use the engineer ID for selection
-    onChange={(e) => {
-      const selectedId = e.target.value;
-      const selectedEngineer = engineers.find(
-        (eng) => eng.id === parseInt(selectedId)
-      );
-
-      // store both ID and name in state
-      setProjectEngineerId(selectedId);
-      setProjectEngineer(
-        selectedEngineer
-          ? `${selectedEngineer.first_name} ${selectedEngineer.last_name}`
-          : ''
-      );
-    }}
-    className="form-control"
-  >
-    <option value="">Select Project Engineer</option>
-    {engineers.map((eng) => (
+ <select
+  value={projectEngineerId || ""}
+  onChange={(e) => {
+    const selectedId = e.target.value;
+    const selectedEngineer = engineers.find(
+      (eng) => eng.id === parseInt(selectedId)
+    );
+    setProjectEngineerId(selectedId);
+    setProjectEngineer(
+      selectedEngineer
+        ? `${selectedEngineer.first_name} ${selectedEngineer.last_name}`
+        : ""
+    );
+  }}
+  className="form-control"
+>
+  <option value="">Select Project Engineer</option>
+  {Array.isArray(engineers) &&
+    engineers.map((eng) => (
       <option key={eng.id} value={eng.id}>
         {eng.first_name} {eng.last_name}
       </option>
     ))}
-  </select>
+</select>
+
 </div>
 
                 
@@ -1086,7 +508,7 @@ const JobPhasesViewModal = ({ job, onClose }) => (
 
 // Mapping from section key to page number
 const SECTIONS = [
-    "users","employees","equipment","job_phases",
+    "users","employees","equipment","job-phases",
     "materials","vendors","dumping_sites","crewMapping"
 ];
 const ITEMS_PER_PAGE = 1; // or desired default
@@ -1115,6 +537,8 @@ const AdminDashboard = ({ data: initialData, onLogout }) => {
     const [notification, setNotification] = useState({ shown: false, message: "" });
     const [confirmation, setConfirmation] = useState({ shown: false, message: "", onConfirm: () => {} });
     const [formError, setFormError] = useState("");
+    const [fieldErrors, setFieldErrors] = useState({});
+
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState(null);
 
@@ -1124,6 +548,11 @@ const [categoryNumbers, setCategoryNumbers] = useState([]);
 const [selectedCategoryId, setSelectedCategoryId] = useState("");
 const [selectedCategoryNumber, setSelectedCategoryNumber] = useState("");
 const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+// In AdminDashboard.js
+// ... existing states
+const [subModal, setSubModal] = useState({ shown: false, type: null, title: '' }); // <-- ADD THIS
+// ...
+
 
 
 useEffect(() => {
@@ -1149,42 +578,37 @@ useEffect(() => {
 }, []);
 
 
-// const getEquipmentFormFields = () => {
-//   return getFormFields("equipment").map((field) => {
-//     if (field.name === "department") {
-//       return {
-//         ...field,
-//         options: [
-//           { value: "", label: "Select Department" },  // Default placeholder
-//           ...departments.map((d) => ({ value: d.id, label: d.name })),
-//         ],
-//       };
-//     }
-//     if (field.name === "category") {
-//       return {
-//         ...field,
-//         options: [
-//           { value: "", label: "Select Category" },  // Default placeholder
-//           ...categories.map((c) => ({ value: c.id, label: c.name })),
-//         ],
-//       };
-//     }
-//     if (field.name === "category_number") {
-//       return {
-//         ...field,
-//         options: [
-//           { value: "", label: "Select Category Number" },  // Default placeholder
-//           ...categoryNumbers,
-//         ],
-//       };
-//     }
-//     return field;
-//   });
-// };
 
 
+const openSubModal = (type, title) => {
+  setSubModal({ shown: true, type, title });
+};
 
+const closeSubModal = () => {
+  setSubModal({ shown: false, type: null, title: '' });
+};
 
+const handleAddSubItem = async (type, formData) => {
+  const endpoint = type === 'department' ? 'departments' : 'categories';
+  try {
+    // --- FIX IS HERE: Added a trailing slash to the URL ---
+    const response = await axios.post(`${API_URL}/${endpoint}/`, formData);
+    
+    // Update the state with the new item so it appears in the dropdown
+    if (type === 'department') {
+      setDepartments(prev => [...prev, response.data]);
+    } else if (type === 'category') {
+      setCategories(prev => [...prev, response.data]);
+    }
+    
+    showNotification(`${capitalizeFirstLetter(type)} added successfully!`);
+    closeSubModal();
+  } catch (error) {
+    const errorMessage = error.response?.data?.detail || `Error adding ${type}.`;
+    showNotification(errorMessage);
+    console.error(`Error adding ${type}:`, error);
+  }
+};
       const [pagination, setPagination] = useState(
     Object.fromEntries(SECTIONS.map((sec) => [sec, 1]))
   );
@@ -1229,7 +653,7 @@ useEffect(() => {
                 try {
                     const response = await axios.get(`${API_URL}/${endpoint}`);
                     // Map job-phases back to job_phases key for state consistency
-                    const key = endpoint === 'job-phases' ? 'job_phases' : endpoint;
+                    const key = endpoint === 'job-phases' ? 'job-phases' : endpoint;
                     newData[key] = response.data;
                 } catch (error) {
                     // Log the error but continue trying to fetch other data
@@ -1275,7 +699,7 @@ useEffect(() => {
         };
     }, [isResizing]);
 
-    const typeToStateKey = { user: "users", employee: "employees", equipment: "equipment", job_phase: "job_phases", material: "materials", vendor: "vendors", dumping_site: "dumping_sites" };
+    const typeToStateKey = { user: "users", employee: "employees", equipment: "equipment", job_phase: "job-phases", material: "materials", vendor: "vendors", dumping_site: "dumping_sites" };
 
     const onUpdate = (key, newList) => setData(prev => ({ ...prev, [key]: newList }));
 
@@ -1317,50 +741,127 @@ const handleSaveJob = async (jobData) => {
 };
 
 
+
 const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) => {
-  const stateKey = typeToStateKey[type];
-  setFormError("");
+    const stateKey = typeToStateKey[type];
+    setFormError('');
+    setFieldErrors({});
 
-  // ✅ Normalize status to lowercase before sending to backend
-  if (itemData.status) {
-    itemData.status = itemData.status.toLowerCase();
-  }
+    // This is the raw data from your form
+    const formData = { ...itemData };
 
-  if (mode === "add") {
-    const idKey = type === "user" ? "username" : "id";
-    const newItemId = itemData[idKey];
-    if ((data[stateKey] || []).some(item => item[idKey] === newItemId)) {
-      const itemType = type.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
-      setFormError(`${itemType} with ID '${newItemId}' already exists.`);
-      return;
-    }
-  }
+    // This will hold the final, clean data to be sent to the backend
+    let payload;
 
-try {
-    let response;
-    const cleanData = { ...itemData };
+    // --- START: TYPE-SPECIFIC PAYLOAD PREPARATION ---
 
-    // Remove type for equipment
-    if (type === "equipment") {
-        delete cleanData.type;
-    }
+    if (type === 'equipment') {
+        // 1. For 'equipment', we manually construct the payload
+        //    to match the backend's snake_case schema.
 
-    if (mode === "edit" && existingItem) {
-        const itemId = existingItem.id;
-        response = await axios.put(`${API_URL}/${stateKey}/${encodeURIComponent(itemId)}`, cleanData);
-        onUpdate(stateKey, (data[stateKey] || []).map(it => it.id === itemId ? response.data : it));
+        // Client-side validation before constructing the payload
+        if (!formData.id || formData.id.trim() === '') {
+            setFieldErrors({ id: 'Equipment ID is a required field.' });
+            return;
+        }
+        if (!formData.departmentId) {
+            setFieldErrors({ departmentId: 'Department is required.' });
+            return;
+        }
+        if (!formData.categoryid) {
+            setFieldErrors({ categorynumber: 'Category Number is required.' });
+            return;
+        }
+
+        // Build the payload with the exact field names and types the backend expects
+        payload = {
+            id: formData.id,
+            name: formData.name,
+            department_id: parseInt(formData.departmentId, 10),
+            category_id: parseInt(formData.categoryid, 10),
+            vin_number: formData.vinnumber || null,
+            status: (formData.status || 'Active').toLowerCase()
+        };
+
+    } else if (['user', 'dumpingsite'].includes(type)) {
+        // 2. For 'user' and 'dumpingsite', the primary task is converting their ID to a number.
+
+        if (formData.id) {
+            const numericId = parseInt(formData.id, 10);
+            if (isNaN(numericId)) {
+                setFieldErrors({ id: 'ID must be a valid number.' });
+                return;
+            }
+            formData.id = numericId; // Update the ID in the formData object
+        }
+        payload = { ...formData }; // The rest of the fields are correct
+
     } else {
-        response = await axios.post(`${API_URL}/${stateKey}/`, cleanData);
-        onUpdate(stateKey, [response.data, ...(data[stateKey] || [])]);
+        // 3. For 'employee' and all other types, the form data is already in the correct format.
+        payload = { ...formData };
     }
-    closeMainModal();
-} 
-catch (error) {
-    const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : "An unexpected error occurred.";
-    setFormError(`Error: ${errorMessage}`);
-  }
-};
 
+    // Normalize status to lowercase if it exists in the final payload
+    if (payload.status) {
+        payload.status = payload.status.toLowerCase();
+    }
+
+    // --- END: PAYLOAD PREPARATION ---
+
+
+    // --- Client-side duplicate checks ---
+    if (mode === 'add') {
+        const newErrors = {};
+        if (type === 'equipment' && data.equipment.some(equip => equip.id === payload.id)) {
+            newErrors.id = 'Equipment ID already exists.';
+        } else if (type === 'user' && data.users.some(user => user.id === payload.id)) {
+            newErrors.id = 'User ID already exists.';
+        } else if (type === 'employee' && data.employees.some(emp => emp.id === payload.id)) {
+            newErrors.id = 'Employee ID already exists.';
+        } // ... etc.
+
+        if (Object.keys(newErrors).length > 0) {
+            setFieldErrors(newErrors);
+            return;
+        }
+    }
+
+
+    try {
+        let response;
+        if (mode === "edit" && existingItem) {
+            const itemId = existingItem.id;
+            response = await axios.put(`${API_URL}/${stateKey}/${encodeURIComponent(itemId)}`, payload);
+            onUpdate(stateKey, (data[stateKey] || []).map(it => it.id === itemId ? response.data : it));
+        } else {
+            response = await axios.post(`${API_URL}/${stateKey}/`, payload);
+            onUpdate(stateKey, [response.data, ...(data[stateKey] || [])]);
+        }
+        closeMainModal();
+    } catch (error) {
+        // Your existing, excellent error handling logic remains here
+        const errorData = error.response?.data?.detail;
+        if (error.response?.status === 422 && errorData) {
+            const newErrors = {};
+            if (Array.isArray(errorData)) {
+                errorData.forEach(err => {
+                    if (err.loc && err.loc.length > 1) {
+                        const backendField = err.loc[1];
+                        const frontendField = {
+                            'department_id': 'departmentId',
+                            'category_id': 'categoryid'
+                        }[backendField] || backendField;
+                        newErrors[frontendField] = err.msg;
+                    }
+                });
+            }
+            setFieldErrors(newErrors);
+        } else {
+            setFormError('An unexpected error occurred.');
+        }
+        console.error(`Error processing ${type}:`, error);
+    }
+};
 
 // const handleToggleStatus = async (type, item, newStatus) => {
 //   const stateKey = typeToStateKey[type];
@@ -1396,55 +897,50 @@ catch (error) {
 //   }
 // };
 
+// In AdminDashboard.js
+
 const handleToggleStatus = async (type, item, newStatus) => {
-  const stateKey = typeToStateKey[type];
-   let mappedStatus = newStatus.toLowerCase();
-  if (type === "job_phase") {
-    if (mappedStatus === "complete") mappedStatus = "inactive";
-    else if (mappedStatus === "on_hold") mappedStatus = "on_hold";
-  }
-  const updatedItem = { ...item, status: mappedStatus };
+    const stateKey = typeToStateKey[type];
+    if (!stateKey) {
+        console.error("Could not find a state key for type:", type);
+        return;
+    }
 
-  // Remove nested relational fields before sending
-  const { category_rel, department_rel, ...cleanPayload } = updatedItem;
+    const payload = { status: newStatus.toLowerCase() };
+    const isJob = type === 'jobphase';
+    const idKey = 'id';
+    const itemId = item[idKey];
 
-  // ✅ Map frontend keys to backend endpoints
-  const endpointMap = {
-    job_phases: "job-phases/by-id",
-    employees: "employees",
-    equipment: "equipment",
-    // add others if needed
-  };
-  if (stateKey === "job_phases" && Array.isArray(cleanPayload.phase_codes)) {
-    cleanPayload.phase_codes = cleanPayload.phase_codes.map(
-      (p) => (typeof p === "string" ? p : p.code)
-    );
-  }
-  const endpoint = `${API_URL}/${endpointMap[stateKey] || stateKey}/${encodeURIComponent(item.id)}`;
+const resourcePath =
+  type.toLowerCase().includes('job') ? 'job-phases/by-id' : stateKey;
+const endpoint = `${API_URL}/${resourcePath}/${encodeURIComponent(item.id)}`;
 
-  console.log(`Changing status for ${type} id:${item.id}`, cleanPayload);
 
-  try {
-    const response = await axios.put(endpoint, cleanPayload);
 
-    // ✅ Update UI immediately
-    setData((prev) => ({
-      ...prev,
-      [stateKey]: (prev[stateKey] || []).map((it) =>
-        it.id === item.id ? response.data : it
-      ),
-    }));
-  } catch (error) {
-    console.error("Error updating status:", error);
-    alert(
-      `Error updating status: ${
-        error.response?.data
-          ? JSON.stringify(error.response.data)
-          : "Unexpected error"
-      }`
-    );
-  }
+    console.log("🔗 PUT request to:", endpoint);
+
+    try {
+const response = await axios.put(endpoint, payload);
+setData(prev => {
+  const currentList = prev[stateKey] || [];
+  const updatedList = currentList.map(it => it.id === item.id ? response.data : it);
+  return { ...prev, [stateKey]: updatedList };
+});
+
+
+
+        if (newStatus.toLowerCase() === 'inactive') {
+            setPagination(prev => ({ ...prev, [stateKey]: 1 }));
+        }
+
+    } catch (error) {
+        const errorDetail = error.response?.data?.detail;
+        const errorMessage = errorDetail ? JSON.stringify(errorDetail) : 'An unexpected error occurred.';
+        console.error(`Error updating status for ${type}:`, error);
+        alert(`Error updating status: ${errorMessage}`);
+    }
 };
+
 
     const handleDeleteItem = async (type, itemId) => {
         const deleteAction = async () => {
@@ -1466,40 +962,68 @@ const handleToggleStatus = async (type, item, newStatus) => {
     
     const getFormFields = (type) => {
         switch (type) {
-            case "user": return [ { name: "username", label: "Username", required: true }, { name: "first_name", label: "First Name", required: true }, { name: "middle_name", label: "Middle Name" }, { name: "last_name", label: "Last Name", required: true }, { name: "email", label: "Email", required: true, type: "email" }, { name: "password", label: "Password", type: "password", required: true }, { name: "role", label: "Role", type: "select", options: [ { value: "foreman", label: "Foreman" }, { value: "supervisor", label: "Supervisor" }, { value: "project_engineer", label: "Project Engineer" }, { value: "admin", label: "Accountant" } ], required: true, defaultValue: "admin" } ];
+            case "user": return [ { name: "id", label: "User ID", required: true },{ name: "username", label: "Username", required: true }, { name: "first_name", label: "First Name", required: true }, { name: "middle_name", label: "Middle Name" }, { name: "last_name", label: "Last Name", required: true }, { name: "email", label: "Email", required: true, type: "email" }, { name: "password", label: "Password", type: "password", required: true }, { name: 'role', label: 'Role', type: 'select', options: [
+            { value: 'foreman', label: 'Foreman' },
+            { value: 'supervisor', label: 'Supervisor' },
+            { value: 'project_engineer', label: 'Project Engineer' },
+            { value: 'admin', label: 'Accountant' },
+        ], required: true, defaultValue: 'admin' },
+
+        // --- ADD THIS OBJECT ---
+        { name: 'status', label: 'Status', type: 'select', options: [
+            { value: 'active', label: 'Active' },
+            { value: 'inactive', label: 'Inactive' },
+        ], required: true, defaultValue: 'active' }
+    ];
             case "employee": return [ { name: "id", label: "Employee ID", required: true }, { name: "first_name", label: "First Name", required: true }, { name: "middle_name", label: "Middle Name" }, { name: "last_name", label: "Last Name", required: true }, { name: "class_1", label: "Class Code 1" }, { name: "class_2", label: "Class Code 2" }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
- case "equipment":
-            return [
-                { name: "id", label: "Equipment ID", required: true },
-                { name: "name", label: "Equipment Name", required: true },
-                // { name: "category", label: "Category Name" }, // Changed from "type" to "category"
-                          
-                // { name: "department", label: "Department", required: true },
-                // { name: "category_number", label: "Category Number", required: true },
-                 {
-  name: "category_number",
-  label: "Category Number",
-  type: "select",
-  options: categoryNumbers, // list of numbers as value/label
-  required: true,
-},
+    case 'equipment':
+      return [
+        { name: 'id', label: 'Equipment ID', required: true },
+        { name: 'name', label: 'Equipment Name', required: true },
         {
-      name: "category",
-      label: "Category Name",
-      type: "text",   // ✅ changed from "select" to "text
-      readOnly: true, // ✅ add this
-    },
-        // Dropdown for department
-        { 
-            name: "department_id", 
-            label: "Department", 
-            type: "select", 
-            options: [],  // will be filled dynamically
-            required: true 
+          name: 'departmentId',
+          label: 'Department',
+          type: 'select',
+          required: true,
+          options: [
+            { value: '', label: 'Select Department' },
+            ...departments.map(d => ({ value: d.id, label: d.name }))
+          ],
+          onAddNew: () => openSubModal('department', 'Add New Department') // <-- ADD THIS
         },
-                { name: "vin_number", label: "VIN Number" },
-                { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" }
-            ];            
+        {  
+            name: 'categorynumber',
+          label: 'Category Number',
+          type: 'select',
+          required: true,
+          options: [
+            { value: '', label: 'Select Category Number' },
+            ...categories.map(c => ({ value: c.number, label: c.number }))
+          ],
+          onAddNew: () => openSubModal('category', 'Add New Category') // <-- ADD THIS
+        },
+        { name: 'category', label: 'Category Name', type: 'text', readOnly: true },
+        { name: 'vinnumber', label: 'VIN Number' },
+        {
+          name: 'status', label: 'Status', type: 'select',
+          options: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }],
+          required: true, defaultValue: 'Active'
+        }
+         ];
+
+    // Case for the sub-modal to add a new department
+    case 'department':
+      return [
+        { name: 'name', label: 'Department Name', required: true }
+      ];
+
+    // Case for the sub-modal to add a new category
+    case 'category':
+      return [
+        { name: 'number', label: 'Category Number', required: true },
+        { name: 'name', label: 'Category Name', required: true }
+      ];
+
             case "vendor": return [ { name: "name", label: "Work Performed Name", required: true }, { name: "unit", label: "Unit", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
             case "material": return [ { name: "name", label: "Material/Trucking Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
             case "dumping_site": return [ { name: "id", label: "Site ID", required: true }, { name: "name", label: "Site Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
@@ -1630,47 +1154,76 @@ const prepareJobForEditModal = (job) => {
     };
 
     const renderSection = () => {
-        const makeTableWithPagination  = (type, title, headers, rowRender, itemLabel) => {
-            const label = itemLabel || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            const key = typeToStateKey[type];
-            const dataArr = data[key] || [];
-    const currentPage = pagination[key];
-    const itemsPerPage = ITEMS_PER_PAGE;
-    const totalPages = Math.ceil(dataArr.length / itemsPerPage);
-    const pagedData = dataArr.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-           return (
+// In AdminDashboard.js, replace the entire function
+
+const makeTableWithPagination = (type, title, headers, rowRender, itemLabel) => {
+    const label = itemLabel || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const key = typeToStateKey[type];
+    const dataArr = data[key] || [];
+
+    // This correctly creates a list of ONLY active items
+    const activeData = dataArr.filter(item => item.status !== 'inactive');
+
+    const currentPage = pagination[key] || 1;
+    const itemsPerPage = ITEMSPERPAGE;
+
+    // --- FIX #1: Calculate total pages based on the FILTERED data ---
+    const totalPages = Math.ceil(activeData.length / itemsPerPage);
+
+    // --- FIX #2: Slice the FILTERED data to get the current page's items ---
+    const pagedData = activeData.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage
+    );
+
+    // This prevents being stuck on an empty page after filtering
+    if (pagedData.length === 0 && activeData.length > 0) {
+        // If current page is empty but there's still data, go back to page 1
+        handlePaginate(key, 1, totalPages);
+    }
+
+    return (
         <div>
             <DataTableSection
                 title={title}
                 headers={headers}
+                // --- FIX #3: Pass the correctly filtered and paginated data ---
                 data={pagedData}
                 renderRow={(item) => <>{rowRender(item)}</>}
-                onAdd={() => setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })}
-                onEdit={item => setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })}
-                onDelete={id => handleDeleteItem(type, id)}
+                onAdd={() => setModal({ shown: true, type, title: `Add ${label}`, mode: 'add', item: null })}
+                onEdit={(item) => setModal({ shown: true, type, title: `Edit ${label}`, mode: 'edit', item })}
+                onDelete={(id) => handleDeleteItem(type, id)}
                 handleToggleStatus={handleToggleStatus}
                 activeSection={type}
             />
             <PaginationControls
                 currentPage={currentPage}
+                // --- FIX #4: Pass the correct total pages count ---
                 totalPages={totalPages}
-                onPaginate={pageNum => handlePaginate(key, pageNum, totalPages)}
+                onPaginate={(pageNum) => handlePaginate(key, pageNum, totalPages)}
             />
         </div>
     );
 };
+
         switch (activeSection) {
+            case 'dashboard':
+            return <TimesheetCounts />;
             case "users": 
                 return makeTableWithPagination(
                     "user", 
                     "User Management", 
-                    ["Username", "First Name", "Last Name", "Role"], 
+                    ["ID", "Username", "First Name", "Last Name", "Role","Status"], 
                     u => (
                         <>
+                    <td key={u.id}>{u.id}</td>
+
                             <td key={u.username}>{u.username}</td>
                             <td key={u.first_name}>{u.first_name}</td>
                             <td key={u.last_name}>{u.last_name}</td>
                             <td key={u.role}>{formatRole(u.role)}</td>
+                                        <td key={u.status}>{capitalizeFirstLetter(u.status)}</td>
+
                         </>
                     )
                 );
@@ -1740,37 +1293,48 @@ case "equipment":
             case "materials": 
                 return makeTableWithPagination("material", "Materials and Trucking", ["Name", "Status"], m => <><td key={m.name}>{m.name}</td><td key={m.status}>{capitalizeFirstLetter(m.status)}</td>
 </>, "Material and Trucking");
-            case "job_phases": 
-                return (<DataTableSection 
-                            title="Jobs & Phases Management" 
-                            headers={["Job Code", "Description", "Project Engineer", "Status"]} 
-                            data={data.job_phases || []} 
-                            renderRow={job => (<> <td>{job.job_code}</td> <td>{job.job_description}</td> <td>{job.project_engineer}</td> <td>
-  {(() => {
-    const statusMap = {
-      active: "Active",
-      inactive: "Complete",
-      on_hold: "On Hold",
-    //   complete: "Complete",
-    };
-    return statusMap[job.status?.toLowerCase()] || job.status;
-  })()}
-</td>
- </>)} 
-                            onAdd={() => setJobModal({ shown: true, mode: "add", job: null })} 
-                            onEdit={(job) => setJobModal({ shown: true, mode: "edit", job: prepareJobForEditModal(job) })} 
-                            onDelete={(job_code) => handleDeleteItem("job_phase", job_code)} 
-                            extraActions={(job) => (<button className="btn btn-view btn-sm" onClick={() => setViewPhasesJob(job)}> View Phases </button>)} 
-                            // ✅ FIX: Pass props here as well
-                            handleToggleStatus={handleToggleStatus}
-                            activeSection="job_phase"
-                        />);
+case "job-phases":
+  return (
+    <DataTableSection 
+      title="Jobs & Phases Management" 
+      headers={["Job Code", "Description", "Project Engineer", "Status"]} 
+      data={data.job_phases || []} 
+      renderRow={job => (
+        <>
+          <td>{job.job_code}</td> 
+          <td>{job.job_description}</td> 
+          <td>{job.project_engineer}</td> 
+          <td>
+            {(() => {
+              const statusMap = {
+                active: "Active",
+                inactive: "Complete",
+                on_hold: "On Hold",
+                // complete: "Complete",
+              };
+              return statusMap[job.status?.toLowerCase()] || job.status;
+            })()}
+          </td>
+        </>
+      )} 
+      onAdd={() => setJobModal({ shown: true, mode: "add", job: null })} 
+      onEdit={(job) => setJobModal({ shown: true, mode: "edit", job: prepareJobForEditModal(job) })} 
+      onDelete={(job_code) => handleDeleteItem("job_phase", job_code)} 
+      extraActions={(job) => (
+        <button className="btn btn-view btn-sm" onClick={() => setViewPhasesJob(job)}> View Phases </button>
+      )} 
+      handleToggleStatus={handleToggleStatus}
+      activeSection="job_phase"
+    />
+  );
+
             case "dumping_sites": 
                 return makeTableWithPagination("dumping_site", "Dumping Site Management", ["Site ID", "Site Name", "Status"], ds => (<><td key={ds.id}>{ds.id}</td><td key={ds.name}>{ds.name}</td><td key={ds.status}>{capitalizeFirstLetter(ds.status)}</td>
 </>), "Dumping Site");
             case "crewMapping": 
                 const allResources = { 
-                    users: data.users || [], employees: data.employees || [], equipment: data.equipment || [], 
+                            users: (data.users || []).filter(u => u.status === 'active'),
+employees: data.employees || [], equipment: data.equipment || [], 
                     materials: data.materials || [], vendors: data.vendors || [], dumping_sites: data.dumping_sites || []
                 }; 
                 return <CrewMappingManager allResources={allResources} />;
@@ -1785,22 +1349,24 @@ case "equipment":
 
             {modal.shown && (
   <Modal title={modal.title} onClose={closeMainModal}>
-  <GenericForm
-    fields={
-      modal.type === "equipment"
-        ? getEquipmentFormFields()  // ✅ Use this for equipment
-        : getFormFields(modal.type) // ✅ Use normal form for others
-    }
-    categories={categories} 
-    defaultValues={modal.item || {}}
-    onSubmit={(formData) =>
-      handleAddOrUpdateItem(modal.type, formData, modal.mode, modal.item)
-    }
-    errorMessage={formError}
-  />
+    <GenericForm
+      fields={getFormFields(modal.type)}
+      categories={categories} // Pass categories here
+      defaultValues={modal.item}
+      onSubmit={(formData) => handleAddOrUpdateItem(modal.type, formData, modal.mode, modal.item)}
+errorMessage={fieldErrors} // Pass the new state as a prop
+  genericErrorMessage={formError}   />
 </Modal>
 
 )}
+    {subModal.shown && (
+      <Modal title={subModal.title} onClose={closeSubModal}>
+        <GenericForm
+          fields={getFormFields(subModal.type)}
+          onSubmit={(formData) => handleAddSubItem(subModal.type, formData)}
+        />
+      </Modal>
+    )}
 
             {viewPhasesJob && <JobPhasesViewModal job={viewPhasesJob} onClose={() => setViewPhasesJob(null)} />}
             {jobModal.shown && <JobWithPhasesModal mode={jobModal.mode} job={jobModal.job} onSave={handleSaveJob} onClose={() => setJobModal({ shown: false, mode: "", job: null })} showNotification={showNotification} />}
@@ -1835,10 +1401,11 @@ case "equipment":
 
                 <ul className="sidebar-nav">
                     {[
+                        'dashboard',
                         "users",
                         "employees",
                         "equipment",
-                        "job_phases",
+                        "job-phases",
                         "materials",
                         "vendors",
                         "dumping_sites",
@@ -1852,8 +1419,10 @@ case "equipment":
                                 <span className="icon">{getIconForSection(sec)}</span>
                                 {!sidebarCollapsed && (
                                     <span className="label">
-                                        {sec === "job_phases"
-                                            ? "Jobs & Phases"
+                                         {sec === "dashboard" // <= ADD THIS CONDITION
+        ? "Dashboard"
+        : sec === "job-phases"
+        ? "Jobs & Phases"
                                             : sec === "crewMapping"
                                             ? "Crew Mapping"
                                             : sec === "vendors"
@@ -1918,7 +1487,10 @@ const DataTableSection = ({ title, headers, data = [], renderRow, onDelete, onAd
     : item.status?.toLowerCase() || "active"
 }
 
-                onChange={(e) => handleToggleStatus(activeSection, item, e.target.value)}
+                onChange={(e) => {
+  const selected = e.target.value === "complete" ? "inactive" : e.target.value;
+  handleToggleStatus(activeSection, item, selected);
+}}
                 className="btn-sm" 
                 style={{
                     // --- MODERN STYLING ENHANCEMENTS ---

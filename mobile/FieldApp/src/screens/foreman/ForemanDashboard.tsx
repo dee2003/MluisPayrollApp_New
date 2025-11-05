@@ -318,7 +318,7 @@ import DocumentScanner from 'react-native-document-scanner-plugin';
 import RNFS from 'react-native-fs';
 import Icon from 'react-native-vector-icons/Feather';
 
-const API_BASE_URL = ' https://coated-nonattributive-babara.ngrok-free.dev';
+const API_BASE_URL = 'https://cb12ad463b90.ngrok-free.app';
 
 const theme = {
   colors: {

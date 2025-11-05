@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Use the ngrok URL you provided to connect the app to your local backend
-const API_BASE_URL = 'https://coated-nonattributive-babara.ngrok-free.dev'; 
+const API_BASE_URL = 'https://cb12ad463b90.ngrok-free.app'; 
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

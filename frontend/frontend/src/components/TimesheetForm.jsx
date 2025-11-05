@@ -56,22 +56,42 @@ useEffect(() => {
 }, []);
 
 
-    // --- Load initial data (Foremen and Job Codes) ---
-    useEffect(() => {
-    axios.get(`${API_URL}/users`)
-        .then((res) => {
-            const users = res.data;
-            const foremanUsers = users.filter(user => user.role === "foreman");
-            const supervisorUsers = users.filter(user => user.role === "supervisor");
-            setForemen(foremanUsers);
-            setSupervisors(supervisorUsers);
-        })
-        .catch(err => console.error("Failed to load users:", err));
+// In TimesheetForm.jsx
 
-        axios.get(`${API_URL}/job-phases/active`)
-            .then((res) => setJobCodes(res.data))
-            .catch(err => console.error("Failed to load job codes:", err));
-    }, []);
+// --- Load initial data (Foremen and Job Codes) ---
+useEffect(() => {
+  // Fetch foremen
+  axios.get(`${API_URL}/users/role/foreman`)
+    .then(res => {
+      setForemen(res.data);
+    })
+    .catch(err => {
+      console.error("Failed to load foremen:", err);
+      setForemen([]); // fallback to empty
+    });
+
+  // Fetch supervisors
+  axios.get(`${API_URL}/users/role/supervisor`)
+    .then(res => {
+      setSupervisors(res.data);
+    })
+    .catch(err => {
+      console.error("Failed to load supervisors:", err);
+      setSupervisors([]); // fallback to empty
+    });
+
+  // Fetch job phases
+  axios.get(`${API_URL}/job-phases/active`)
+    .then(res => {
+      setJobCodes(res.data);
+    })
+    .catch(err => {
+      console.error("Failed to load job codes:", err);
+      setJobCodes([]);
+    });
+}, []);
+
+
 
     // --- Load foreman's crew mapping ---
     useEffect(() => {
