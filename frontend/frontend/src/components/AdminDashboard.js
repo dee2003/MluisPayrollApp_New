@@ -1959,7 +1959,7 @@ const SECTIONS = [
     "users","employees","equipment","job_phases",
     "materials","vendors","dumping_sites","crewMapping"
 ];
-const ITEMS_PER_PAGE = 2; // or desired default
+const ITEMS_PER_PAGE = 10; // or desired default
 
 
 const capitalizeFirstLetter = (str) => {
@@ -3045,7 +3045,7 @@ case "equipment":
 
 
 
-           case "vendors":
+         case "vendors":
   return makeTableWithPagination(
     "vendor",
     "Vendors",
@@ -3056,8 +3056,16 @@ case "equipment":
         <td key={v.name}>{v.name}</td>
         <td key={v.vendor_type}>{v.vendor_type || "-"}</td>
         <td key={v.vendor_category}>{v.vendor_category || "-"}</td>
-        <td key={v.vendor_material}>{v.vendor_material || "-"}</td>
-        <td key={v.unit}>{v.unit || "-"}</td>
+        <td>
+          {v.materials?.length
+            ? v.materials.map((m) => m.material).join(", ")
+            : "-"}
+        </td>
+        <td>
+          {v.materials?.length
+            ? v.materials.map((m) => m.unit).join(", ")
+            : "-"}
+        </td>
         <td key={v.status}>{capitalizeFirstLetter(v.status)}</td>
       </>
     ),

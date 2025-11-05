@@ -53,3 +53,11 @@ def create_vendor(vendor_data: schemas.VendorCreate, db: Session = Depends(datab
     return vendor
 
 
+from sqlalchemy.orm import selectinload
+
+@router.get("/vendors", response_model=List[schemas.VendorRead])
+def get_vendors(db: Session = Depends(database.get_db)):
+    vendors = db.query(models.Vendor).options(
+        selectinload(models.Vendor.materials)
+    ).all()
+    return vendors

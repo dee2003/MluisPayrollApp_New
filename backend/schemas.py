@@ -197,6 +197,8 @@ class VendorMaterialCreate(VendorMaterialBase):
 
 class VendorMaterialRead(VendorMaterialBase):
     id: int
+    material: str
+    unit: str
     class Config:
         orm_mode = True
 
