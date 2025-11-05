@@ -17,7 +17,7 @@ body { margin: 0; font-family: var(--font-family-sans); background-color: var(--
 .btn-outline { background-color: transparent; border-color: var(--color-gray-400); }
 .sidebar-header .btn-outline { color: var(--color-white); border-color: var(--color-white); }
 .admin-layout { display: flex; min-height: 100vh; }
-.admin-sidebar { width: 250px; background-color: var(--color-charcoal-700); color: var(--color-white); padding: 1rem; flex-shrink: 0; }
+.admin-sidebar { width: 250px; background-color: var(--color-charcoal-700); color: var(--color-white); padding: 10px; flex-shrink: 0; }
 .sidebar-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid var(--color-gray-400); }
 .sidebar-nav { list-style: none; padding: 0; margin: 2rem 0 0; }
 .sidebar-nav button { background: none; border: none; display: block; width: 100%; padding: 0.75rem 1rem; color: var(--color-white); text-align: left; cursor: pointer; font-size: 1rem; border-radius: var(--border-radius); }
@@ -473,7 +473,7 @@ button:active {
     border: 1px solid #ddd; /* Lighter border */
     border-radius: var(--border-radius);
     box-sizing: border-box;
-    background-color: var(--color-cream-50); /* Subtle off-white background */
+    background-color: white !important; /* Subtle off-white background */
     color: var(--color-charcoal-700);
     appearance: none; /* Custom styling for selects */
     transition: border-color 0.2s ease, box-shadow 0.2s ease;

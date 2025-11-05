@@ -122,3 +122,4 @@ def delete_job(job_code: str, db: Session = Depends(database.get_db)):
     db.delete(db_job)
     db.commit()
     return {"ok": True, "detail": f"Job '{job_code}' and all its phases deleted"}
+

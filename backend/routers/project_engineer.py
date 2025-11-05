@@ -3,6 +3,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import exists, func
 from datetime import date
 from .. import models, database
+from typing import List
+from .. import models, schemas
+from ..database import get_db
+from ..models import User, UserRole
 
 router = APIRouter(prefix="/api/project-engineer", tags=["Project Engineer"])
 
@@ -124,3 +128,12 @@ def get_timesheet_for_pe_review(
         raise HTTPException(status_code=404, detail="Timesheet not found")
 
     return timesheet
+
+
+
+@router.get("/", response_model=List[schemas.User])
+def get_project_engineers(db: Session = Depends(get_db)):
+    """
+    Returns only users with role 'project_engineer'
+    """
+    return db.query(User).filter(User.role == UserRole.PROJECT_ENGINEER).all()

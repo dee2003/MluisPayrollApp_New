@@ -27,6 +27,7 @@ class UserBase(BaseModel):
     role: str
 
 class UserCreate(UserBase):
+    id: int
     password: str
 
 class User(UserBase):
@@ -150,17 +151,86 @@ class Material(MaterialBase):
 # ===============================
 #         VENDORS
 # ===============================
-class VendorBase(BaseModel):
-    name: str
-    unit: str
-    status: str
 
-class VendorCreate(VendorBase): 
+# from pydantic import BaseModel
+# from typing import List, Optional
+
+# # ---------- VendorMaterial Schemas ----------
+# class VendorMaterialBase(BaseModel):
+#     material: str
+#     unit: Optional[str] = None
+
+# class VendorMaterialCreate(VendorMaterialBase):
+#     pass
+
+# class VendorMaterialRead(VendorMaterialBase):
+#     id: int
+#     class Config:
+#         orm_mode = True
+
+# # ---------- Vendor Schemas ----------
+# class VendorBase(BaseModel):
+#     name: str
+#     vendor_type: Optional[str]
+#     vendor_category: Optional[str]
+#     status: Optional[str] = "active"
+
+# class VendorCreate(VendorBase):
+#     material_ids: List[int] = []
+
+# class VendorRead(VendorBase):
+#     id: int
+#     materials: List[VendorMaterialRead] = []
+#     class Config:
+#         orm_mode = True
+# schemas.py
+# schemas.py
+from pydantic import BaseModel
+from typing import List, Optional
+
+class VendorMaterialBase(BaseModel):
+    material: str
+    unit: str
+
+class VendorMaterialCreate(VendorMaterialBase):
     pass
 
-class Vendor(VendorBase):
+class VendorMaterialRead(VendorMaterialBase):
     id: int
-    model_config = model_config
+    class Config:
+        orm_mode = True
+
+# class VendorMaterialRead(BaseModel):
+#     id: int
+#     material: str
+#     unit: str
+#     class Config:
+#         orm_mode = True
+
+
+class VendorCreate(BaseModel):
+    id: int
+    name: str
+    vendor_type: Optional[str] = None
+    vendor_category: Optional[str] = None
+    status: Optional[str] = None
+    material_ids: Optional[List[int]] = []
+
+
+# 🔹 Vendor (read)
+class VendorRead(BaseModel):
+    id: int
+    name: str
+    vendor_type: Optional[str]
+    vendor_category: Optional[str]
+    status: Optional[str]
+    materials: List[VendorMaterialRead] = []
+
+    class Config:
+        orm_mode = True
+
+
+
 
 # ===============================
 #         JOB PHASES
@@ -185,6 +255,7 @@ class JobPhaseBase(BaseModel):
     contract_no: Optional[str] = None
     job_description: Optional[str] = None
     project_engineer: Optional[str] = None
+    jurisdiction: Optional[str] = None
     location_id: Optional[int] = None
     project_engineer_id: Optional[int] = None  # 👈 new
     project_engineer: Optional[str] = None     # 👈 keep existing
@@ -303,7 +374,18 @@ class CrewMapping(BaseModel):
 
         # If single int or str, wrap in list
         return [int(v)] if is_int_field else [str(v)]
-        
+       
+
+class Vendor(BaseModel):
+    id: int
+    name: str
+    vendor_type: Optional[str]
+    vendor_category: Optional[str]
+    status: Optional[str]
+
+    model_config = ConfigDict(from_attributes=True)
+
+    
 class CrewMappingResponse(BaseModel):
     id: int
     foreman_id: int
