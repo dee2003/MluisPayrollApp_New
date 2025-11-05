@@ -74,7 +74,7 @@ body, #root {
 }
 
 .form-group {
-    margin-bottom: 16px; 
+    margin-bottom: 15px; 
     width: 100%;
 }
 
@@ -111,7 +111,8 @@ body, #root {
 /* ---------------------------------- */
 .btn-primary {
     /* Vibrant Teal/Cyan - Professional and modern */
-    background-color: #00a8cc; 
+    /* background-color: #38a3a5;#00a8cc  */
+    background-color: #00a8cc;
     color: white; 
     padding: 10px 20px;
     border: none; /* Removed dark border for a flatter look */

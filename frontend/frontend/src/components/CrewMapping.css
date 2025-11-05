@@ -1,5 +1,6 @@
 :root {
     --clean-bg: #f9fbfd;
+    --clean-table-header-bg: #dce7f5;
     --clean-card-bg: #ffffff;
     --clean-primary: #3d5a80;
     --clean-accent: #e5eaf3; /* Slightly lighter accent border */
@@ -57,7 +58,7 @@ body {
     background-color: var(--clean-bg);
     font-family: 'Inter', 'Segoe UI', sans-serif;
     color: var(--clean-text);
-    line-height: 1.6;
+    line-height: 1.7;
 }
 
 /* --- General Components --- */
@@ -465,7 +466,7 @@ border-color: #2b7a78;
     text-align: center; /* ← change from left to center */
     font-weight: 600;
     color: var(--clean-primary);
-    background-color: var(--clean-bg);
+    background-color: var(--clean-table-header-bg);
 }
 
 
@@ -599,6 +600,34 @@ border: 1px solid var(--clean-highlight);
   
   /* Animation for appearing */
   animation: slideDownFadeIn 0.3s ease-in-out;
+}
+
+
+
+.btn-status {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s ease;
+  color: white;
+}
+
+.btn-status.active {
+  background-color: #ef4444; /* red */
+}
+
+.btn-status.active:hover {
+  background-color: #dc2626;
+}
+
+.btn-status.inactive {
+  background-color: #22c55e; /* green */
+}
+
+.btn-status.inactive:hover {
+  background-color: #16a34a;
 }
 
 /* Defines the animation */

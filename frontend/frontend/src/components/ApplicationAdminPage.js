@@ -1,456 +1,67 @@
-// import React, { useState, useEffect } from "react";
-// import TimesheetForm from "./TimesheetForm";
-// import axios from "axios";
-// import "./application.css";
-
-// const API_URL = "http://127.0.0.1:8000/api";
-
-// export default function ApplicationAdminPage() {
-//     const [showForm, setShowForm] = useState(false);
-//     const [timesheets, setTimesheets] = useState([]);
-//     const [mappings, setMappings] = useState({});
-//     const [loadingMappings, setLoadingMappings] = useState({});
-//     const [error, setError] = useState("");
-//     const [expandedCardId, setExpandedCardId] = useState(null); // <-- New state for expanded card
-
-//     const fetchTimesheets = async () => {
-//         try {
-//             const res = await axios.get(`${API_URL}/timesheets/`);
-//             setTimesheets(res.data);
-//         } catch (err) {
-//             setError("Could not fetch timesheets");
-//         }
-//     };
-
-//     const fetchMapping = async (foremanId) => {
-//         if (!foremanId || mappings[foremanId] || loadingMappings[foremanId]) return;
-
-//         try {
-//             setLoadingMappings(prev => ({ ...prev, [foremanId]: true }));
-//             const res = await axios.get(`${API_URL}/crew-mapping/by-foreman/${foremanId}`);
-//             setMappings(prev => ({ ...prev, [foremanId]: res.data }));
-//         } catch (err) {
-//             console.error(`Error fetching mapping for foreman ID ${foremanId}:`, err.response ? err.response.data : err.message);
-//         } finally {
-//             setLoadingMappings(prev => ({ ...prev, [foremanId]: false }));
-//         }
-//     };
-
-//     // --- New handler for clicking on a card ---
-//     const handleCardClick = (timesheet) => {
-//         const { id, foreman_id } = timesheet;
-//         if (expandedCardId === id) {
-//             // If card is already expanded, collapse it
-//             setExpandedCardId(null);
-//         } else {
-//             // Otherwise, expand this card
-//             setExpandedCardId(id);
-//             // And fetch its crew details if we haven't already
-//             fetchMapping(foreman_id);
-//         }
-//     };
-
-//     const handleLogout = () => {
-//         localStorage.removeItem('authToken');
-//         window.location.reload();
-//     };
-
-//     useEffect(() => {
-//         fetchTimesheets();
-//     }, []);
-
-//     return (
-//         <div className="admin-page-container">
-//             <header className="admin-header">
-//                 <h1>Admin Dashboard</h1>
-//                 <div className="header-buttons">
-//                     <button className="btn btn-secondary" onClick={handleLogout}>
-//                         Logout
-//                     </button>
-//                     <button onClick={() => setShowForm(true)} className="btn btn-primary">
-//                         + Create Timesheet
-//                     </button>
-//                 </div>
-//             </header>
-
-//             {showForm && <TimesheetForm onClose={() => { setShowForm(false); fetchTimesheets(); }} />}
-
-//             {error && <p className="error-message">{error}</p>}
-
-//             <section className="timesheet-grid">
-//                 {timesheets.length ? (
-//                     timesheets.map(ts => {
-//                         const mapping = mappings[ts.foreman_id];
-//                         return (
-//                             <article
-//                                 key={ts.id}
-//                                 className="timesheet-card"
-//                                 aria-label={`Timesheet: ${ts.timesheet_name}`}
-//                                 onClick={() => handleCardClick(ts)} // <-- Add onClick handler here
-//                             >
-//                                 <div className="card-header">
-//                                     <h2>{ts.timesheet_name}</h2>
-//                                     <time dateTime={ts.date}>
-//                                         {new Date(ts.date).toLocaleDateString()}
-//                                     </time>
-//                                 </div>
-//                                 <div className="card-details">
-//                                     <p>
-//                                         <strong>Foreman:</strong>{" "}
-//                                         {/* This will now display the name from the API */}
-//                                         <span className="foreman-link">{ts.foreman_name}</span>
-//                                     </p>
-
-//                                     {/* --- Conditionally render details only for the expanded card --- */}
-//                                     {expandedCardId === ts.id && (
-//                                         <>
-//                                             {loadingMappings[ts.foreman_id] && <p>Loading crew details...</p>}
-//                                             {mapping && (
-//                                                 <div className="crew-details-box">
-//                                                     <p><strong>Employees:</strong> {mapping.employees?.map(e => `${e.first_name} ${e.last_name}`).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Equipment:</strong> {mapping.equipment?.map(eq => eq.name).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Materials:</strong> {mapping.materials?.map(mat => mat.name).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Vendors:</strong> {mapping.vendors?.map(ven => ven.name).join(", ") || "N/A"}</p>
-//                                                 </div>
-//                                             )}
-//                                         </>
-//                                     )}
-
-//                                     <p><strong>Job Code:</strong> {ts.data?.job?.job_code || "N/A"}</p>
-//                                     <p><strong>Phases:</strong> {ts.data?.job?.phase_codes?.join(", ") || "N/A"}</p>
-//                                 </div>
-//                             </article>
-//                         );
-//                     })
-//                 ) : (
-//                     <p className="empty-message">No timesheets available.</p>
-//                 )}
-//             </section>
-//         </div>
-//     );
-// }
-
-
-
-
-// import React, { useState, useEffect } from "react";
-// import TimesheetForm from "./TimesheetForm";
-// import axios from "axios";
-// import "./application.css";
-// const API_URL = "http://127.0.0.1:8000/api";
-// export default function ApplicationAdminPage() {
-//     const [showForm, setShowForm] = useState(false);
-//     const [timesheets, setTimesheets] = useState([]);
-//     const [mappings, setMappings] = useState({});
-//     const [loadingMappings, setLoadingMappings] = useState({});
-//     const [error, setError] = useState("");
-//     const [expandedCardId, setExpandedCardId] = useState(null);
-//     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-//     // Fetch all timesheets
-//     const fetchTimesheets = async () => {
-//         try {
-//             const res = await axios.get(`${API_URL}/timesheets/`);
-//             setTimesheets(res.data);
-//         } catch (err) {
-//             setError("Could not fetch timesheets");
-//         }
-//     };
-//     // Fetch crew mapping for a foreman (omitted for brevity)
-//     const fetchMapping = async (foremanId) => {
-//         if (!foremanId || mappings[foremanId] || loadingMappings[foremanId]) return;
-//         try {
-//             setLoadingMappings(prev => ({ ...prev, [foremanId]: true }));
-//             const res = await axios.get(`${API_URL}/crew-mapping/by-foreman/${foremanId}`);
-//             setMappings(prev => ({ ...prev, [foremanId]: res.data }));
-//         } catch (err) {
-//             console.error(`Error fetching mapping for foreman ID ${foremanId}:`, err.response ? err.response.data : err.message);
-//         } finally {
-//             setLoadingMappings(prev => ({ ...prev, [foremanId]: false }));
-//         }
-//     };
-//     const handleCardClick = (timesheet) => {
-//         const { id, foreman_id } = timesheet;
-//         if (expandedCardId === id) {
-//             setExpandedCardId(null);
-//         } else {
-//             setExpandedCardId(id);
-//             fetchMapping(foreman_id);
-//         }
-//     };
-//     const handleLogout = () => {
-//         localStorage.removeItem('authToken');
-//         window.location.reload();
-//     };
-//     const toggleViewMode = () => {
-//         setViewMode(prevMode => (prevMode === 'grid' ? 'list' : 'grid'));
-//     };
-//     useEffect(() => {
-//         fetchTimesheets();
-//     }, []);
-//     const isGridView = viewMode === 'grid';
-//     const nextViewIcon = isGridView ? ':clipboard:' : ':card_index_dividers:';
-//     const nextViewText = isGridView ? 'Switch to List View' : 'Switch to Grid View';
-//     const timesheetGridClass = isGridView ? 'timesheet-grid' : 'timesheet-list';
-//     return (
-//         <div className="admin-page-container">
-//             {/* Header with Buttons */}
-//             <header className="admin-header">
-//                 <h1>Application Admin Portal</h1>
-//                 <div className="header-actions"> {/* NEW CONTAINER */}
-//                     <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-//                         + Create Timesheet
-//                     </button>
-//                     <button className="btn btn-icon-link" onClick={handleLogout}>
-//                         Logout
-//                     </button>
-//                 </div>
-//             </header>
-//             {/* Controls Section */}
-//             <div className="dashboard-controls-bar"> {/* NEW CONTAINER for controls */}
-//                 {/* Switch View Button */}
-//                 <div className="timesheet-controls">
-//                     <button
-//                         className="btn btn-toggle"
-//                         onClick={toggleViewMode}
-//                         aria-pressed={!isGridView}
-//                         aria-label={nextViewText}
-//                     >
-//                         {nextViewIcon} {nextViewText}
-//                     </button>
-//                 </div>
-//             </div>
-//             {/* Show Timesheet Form */}
-//             {showForm && (
-//                 <TimesheetForm onClose={() => { setShowForm(false); fetchTimesheets(); }} />
-//             )}
-//             {error && <p className="error-message">{error}</p>}
-//             {/* Timesheet Grid/List (Omitted for brevity, no changes needed here) */}
-//              <section className={timesheetGridClass}>
-//                  {/* ... timesheet mapping logic remains the same ... */}
-//                  {timesheets.length ? (
-//                     timesheets.map(ts => {
-//                         const mapping = mappings[ts.foreman_id];
-//                         const cardClass = `timesheet-card ${expandedCardId === ts.id ? 'expanded' : ''}`;
-//                         return (
-//                             <article
-//                                 key={ts.id}
-//                                 className={cardClass}
-//                                 aria-label={`Timesheet: ${ts.timesheet_name}`}
-//                                 onClick={() => handleCardClick(ts)}
-//                             >
-//                                 <div className="card-header">
-//                                     <h2>{ts.timesheet_name}</h2>
-//                                     <time dateTime={ts.date}>
-//                                         {new Date(ts.date).toLocaleDateString()}
-//                                     </time>
-//                                 </div>
-//                                 <div className="card-details">
-//                                     <p>
-//                                         <strong>Foreman:</strong>{" "}
-//                                         <span className="foreman-link">{ts.foreman_name}</span>
-//                                     </p>
-//                                     {expandedCardId === ts.id && (
-//                                         <>
-//                                             {loadingMappings[ts.foreman_id] && <p>Loading crew details...</p>}
-//                                             {mapping && (
-//                                                 <div className="crew-details-box">
-//                                                     <p><strong>Employees:</strong> {mapping.employees?.map(e => `${e.first_name} ${e.last_name}`).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Equipment:</strong> {mapping.equipment?.map(eq => eq.name).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Materials:</strong> {mapping.materials?.map(mat => mat.name).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Vendors:</strong> {mapping.vendors?.map(ven => ven.name).join(", ") || "N/A"}</p>
-//                                                 </div>
-//                                             )}
-//                                         </>
-//                                     )}
-//                                     <p><strong>Job Code:</strong> {ts.data?.job?.job_code || "N/A"}</p>
-//                                     <p><strong>Phases:</strong> {ts.data?.job?.phase_codes?.join(", ") || "N/A"}</p>
-//                                 </div>
-//                             </article>
-//                         );
-//                     })
-//                 ) : (
-//                     <p className="empty-message">No timesheets available.</p>
-//                 )}
-//              </section>
-//         </div>
-//     );
-// }
-
-
-
-
-
-// import React, { useState, useEffect } from "react";
-// import TimesheetForm from "./TimesheetForm";
-// import axios from "axios";
-// import "./application.css";
-// const API_URL = "http://127.0.0.1:8000/api";
-// export default function ApplicationAdminPage() {
-//     const [showForm, setShowForm] = useState(false);
-//     const [timesheets, setTimesheets] = useState([]);
-//     const [mappings, setMappings] = useState({});
-//     const [loadingMappings, setLoadingMappings] = useState({});
-//     const [error, setError] = useState("");
-//     const [expandedCardId, setExpandedCardId] = useState(null);
-//     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-//     // Fetch all timesheets
-//     const fetchTimesheets = async () => {
-//         try {
-//             const res = await axios.get(`${API_URL}/timesheets/`);
-//             setTimesheets(res.data);
-//         } catch (err) {
-//             setError("Could not fetch timesheets");
-//         }
-//     };
-//     // Fetch crew mapping for a foreman (omitted for brevity)
-//     const fetchMapping = async (foremanId) => {
-//         if (!foremanId || mappings[foremanId] || loadingMappings[foremanId]) return;
-//         try {
-//             setLoadingMappings(prev => ({ ...prev, [foremanId]: true }));
-//             const res = await axios.get(`${API_URL}/crew-mapping/by-foreman/${foremanId}`);
-//             setMappings(prev => ({ ...prev, [foremanId]: res.data }));
-//         } catch (err) {
-//             console.error(`Error fetching mapping for foreman ID ${foremanId}:`, err.response ? err.response.data : err.message);
-//         } finally {
-//             setLoadingMappings(prev => ({ ...prev, [foremanId]: false }));
-//         }
-//     };
-//     const handleCardClick = (timesheet) => {
-//         const { id, foreman_id } = timesheet;
-//         if (expandedCardId === id) {
-//             setExpandedCardId(null);
-//         } else {
-//             setExpandedCardId(id);
-//             fetchMapping(foreman_id);
-//         }
-//     };
-//     const handleLogout = () => {
-//         localStorage.removeItem('authToken');
-//         window.location.reload();
-//     };
-//     const toggleViewMode = () => {
-//         setViewMode(prevMode => (prevMode === 'grid' ? 'list' : 'grid'));
-//     };
-//     useEffect(() => {
-//         fetchTimesheets();
-//     }, []);
-//     const isGridView = viewMode === 'grid';
-//     const nextViewIcon = isGridView ? '' : '';
-//     const nextViewText = isGridView ? 'Switch to List View' : 'Switch to Grid View';
-//     const timesheetGridClass = isGridView ? 'timesheet-grid' : 'timesheet-list';
-//     return (
-//         <div className="admin-page-container">
-//             {/* Header with Buttons */}
-//             <header className="admin-header">
-//                 <h1>Application Admin Portal</h1>
-//                 <div className="header-actions"> {/* NEW CONTAINER */}
-//                     <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-//                         + Create Timesheet
-//                     </button>
-//                     <button className="btn btn-icon-link" onClick={handleLogout}>
-//                         Logout
-//                     </button>
-//                 </div>
-//             </header>
-//             {/* Controls Section */}
-//             <div className="dashboard-controls-bar"> {/* NEW CONTAINER for controls */}
-//                 {/* Switch View Button */}
-//                 <div className="timesheet-controls">
-//                     <button
-//                         className="btn btn-toggle"
-//                         onClick={toggleViewMode}
-//                         aria-pressed={!isGridView}
-//                         aria-label={nextViewText}
-//                     >
-//                         {nextViewIcon} {nextViewText}
-//                     </button>
-//                 </div>
-//             </div>
-//             {/* Show Timesheet Form */}
-//             {showForm && (
-//                 <TimesheetForm onClose={() => { setShowForm(false); fetchTimesheets(); }} />
-//             )}
-//             {error && <p className="error-message">{error}</p>}
-//             {/* Timesheet Grid/List (Omitted for brevity, no changes needed here) */}
-//              <section className={timesheetGridClass}>
-//                  {/* ... timesheet mapping logic remains the same ... */}
-//                  {timesheets.length ? (
-//                     timesheets.map(ts => {
-//                         const mapping = mappings[ts.foreman_id];
-//                         const cardClass = `timesheet-card ${expandedCardId === ts.id ? 'expanded' : ''}`;
-//                         return (
-//                             <article
-//                                 key={ts.id}
-//                                 className={cardClass}
-//                                 aria-label={`Timesheet: ${ts.timesheet_name}`}
-//                                 onClick={() => handleCardClick(ts)}
-//                             >
-//                                 <div className="card-header">
-//                                     <h2>{ts.timesheet_name}</h2>
-//                                     <time dateTime={ts.date}>
-//                                         {new Date(ts.date).toLocaleDateString()}
-//                                     </time>
-//                                 </div>
-//                                 <div className="card-details">
-//                                     <p>
-//                                         <strong>Foreman:</strong>{" "}
-//                                         <span className="foreman-link">{ts.foreman_name}</span>
-//                                     </p>
-//                                     {expandedCardId === ts.id && (
-//                                         <>
-//                                             {loadingMappings[ts.foreman_id] && <p>Loading crew details...</p>}
-//                                             {mapping && (
-//                                                 <div className="crew-details-box">
-//                                                     <p><strong>Employees:</strong> {mapping.employees?.map(e => `${e.first_name} ${e.last_name}`).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Equipment:</strong> {mapping.equipment?.map(eq => eq.name).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Materials and Trucking:</strong> {mapping.materials?.map(mat => mat.name).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Work Performed:</strong> {mapping.vendors?.map(ven => ven.name).join(", ") || "N/A"}</p>
-//                                                     <p><strong>Dumping Sites:</strong> {mapping.dumping_sites?.map(site => site.name).join(", ") || "N/A"}</p>
-
-//                                                 </div>
-//                                             )}
-//                                         </>
-//                                     )}
-//                                     <p><strong>Job Code:</strong> {ts.data?.job?.job_code || "N/A"}</p>
-//                                     <p><strong>Phases:</strong> {ts.data?.job?.phase_codes?.join(", ") || "N/A"}</p>
-//                                 </div>
-//                             </article>
-//                         );
-//                     })
-//                 ) : (
-//                     <p className="empty-message">No timesheets available.</p>
-//                 )}
-//              </section>
-//         </div>
-//     );
-// }
-
-
 import React, { useState, useEffect } from "react";
 import {
   FaChevronLeft,
   FaChevronRight,
   FaRegEdit,
   FaClipboardList,
+  FaTrash,
+  FaSearch, // Added
+  FaCamera, // Added
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import TimesheetForm from "./TimesheetForm.jsx";
 import axios from "axios";
+import "./ApplicationAdmin.css";
+
+const TIMESHEETS_PER_PAGE = 2;
 const API_URL = "http://127.0.0.1:8000/api";
+
 export default function ApplicationAdmin() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState("projects");
+  const [timesheets, setTimesheets] = useState([]);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertType, setAlertType] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const timesheetsPerPage = TIMESHEETS_PER_PAGE;
+
+  // --- NEW SEARCH STATE ---
+  const [searchType, setSearchType] = useState("foreman"); // 'foreman' or 'jobCode'
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // --- UPDATED FILTER LOGIC ---
+  const filteredTimesheets = timesheets.filter((ts) => {
+    if (searchQuery.trim() === "") return true; // Show all if query is empty
+
+    const query = searchQuery.toLowerCase();
+
+    if (searchType === "foreman") {
+      return ts.foreman_name?.toLowerCase().includes(query);
+    }
+    if (searchType === "jobCode") {
+      return ts.data?.job?.job_code?.toLowerCase().includes(query);
+    }
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredTimesheets.length / timesheetsPerPage);
+
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
-  const [timesheets, setTimesheets] = useState([]);
+
   const [mappings, setMappings] = useState({});
   const [loadingMappings, setLoadingMappings] = useState({});
-  const [error, setError] = useState("");
-  const [expandedCardId, setExpandedCardId] = useState(null);
-  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
+  const navigate = useNavigate();
+
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     window.location.reload();
@@ -466,28 +77,48 @@ export default function ApplicationAdmin() {
         return <FaRegEdit className="icon" />;
     }
   };
+
   const handleSectionClick = (sec) => {
     setActiveSection(sec);
   };
+
   // --- Fetch all timesheets ---
-  // --- Fetch all timesheets ---
-const fetchTimesheets = async () => {
-  try {
-    const res = await axios.get(`${API_URL}/timesheets/`);
-    const sorted = res.data.sort(
-      (a, b) => new Date(b.date) - new Date(a.date)  // Newest (today) first
-    );
-    setTimesheets(sorted);
-  } catch (err) {
-    setError("Could not fetch timesheets");
-  }
-};
+  const fetchTimesheets = async () => {
+    setError("");
+    try {
+      const res = await axios.get(`${API_URL}/timesheets/`);
+      const sorted = res.data.sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+      );
+      setTimesheets(sorted);
+
+      // Adjust page if needed (after fetch or delete)
+      const computedTotalPages = Math.ceil(sorted.length / timesheetsPerPage);
+      if (currentPage > computedTotalPages && computedTotalPages > 0) {
+        setCurrentPage(computedTotalPages);
+      } else if (sorted.length === 0) {
+        setCurrentPage(1);
+      }
+    } catch (err) {
+      console.error("Fetch Timesheets Error:", err);
+      setError("Could not fetch timesheets");
+    }
+  };
+  useEffect(() => {
+    if (activeSection === "viewTimesheets") {
+      fetchTimesheets();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection]);
+
   // --- Fetch crew mapping for a foreman ---
   const fetchMapping = async (foremanId) => {
     if (!foremanId || mappings[foremanId] || loadingMappings[foremanId]) return;
     try {
       setLoadingMappings((prev) => ({ ...prev, [foremanId]: true }));
-      const res = await axios.get(`${API_URL}/crew-mapping/by-foreman/${foremanId}`);
+      const res = await axios.get(
+        `${API_URL}/crew-mapping/by-foreman/${foremanId}`
+      );
       setMappings((prev) => ({ ...prev, [foremanId]: res.data }));
     } catch (err) {
       console.error(
@@ -498,22 +129,105 @@ const fetchTimesheets = async () => {
       setLoadingMappings((prev) => ({ ...prev, [foremanId]: false }));
     }
   };
-  const handleCardClick = (ts) => {
-    if (expandedCardId === ts.id) {
-      setExpandedCardId(null);
-    } else {
-      setExpandedCardId(ts.id);
-      fetchMapping(ts.foreman_id);
+  // ⭐️ EVENT HANDLERS ⭐️
+  const handleRowClick = (ts, e) => {
+    if (e.target.closest("button")) return;
+    navigate(`/timesheet/${ts.id}`, { state: { timesheet: ts } });
+  };
+
+  const handleDeleteClick = (id) => {
+    setSelectedId(id);
+    setShowConfirm(true); // show custom popup
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`${API_URL}/timesheets/${selectedId}/`);
+      // Update state efficiently without refetch
+      const updatedTimesheets = timesheets.filter((t) => t.id !== selectedId);
+      setTimesheets(updatedTimesheets);
+
+      setSuccessMessage("Timesheet deleted successfully.");
+      // Adjust page if last item deleted
+      const computedTotalPages = Math.ceil(
+        updatedTimesheets.length / timesheetsPerPage
+      );
+      if (updatedTimesheets.length > 0 && currentPage > computedTotalPages) {
+        setCurrentPage(currentPage - 1);
+      }
+    } catch (error) {
+      console.error("Error deleting timesheet:", error);
+      setError("Failed to delete timesheet.");
+    } finally {
+      setShowConfirm(false);
+      setSelectedId(null);
+      setTimeout(() => {
+        setSuccessMessage("");
+        setError("");
+      }, 3000);
     }
   };
-  const toggleViewMode = () => {
-    setViewMode((prev) => (prev === "grid" ? "list" : "grid"));
+
+  const cancelDelete = () => {
+    setShowConfirm(false);
+    setSelectedId(null);
   };
-  useEffect(() => {
-    if (activeSection === "viewTimesheets") {
-      fetchTimesheets();
+
+  // ⭐️ PAGINATION LOGIC ⭐️
+  const indexOfLastTimesheet = currentPage * timesheetsPerPage;
+  const indexOfFirstTimesheet = indexOfLastTimesheet - timesheetsPerPage;
+  const currentTimesheets = filteredTimesheets.slice(
+    indexOfFirstTimesheet,
+    indexOfLastTimesheet
+  );
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  // ⭐️ PAGINATION CONTROLS COMPONENT ⭐️
+  const PaginationControls = () => {
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i);
     }
-  }, [activeSection]);
+    if (totalPages <= 1) return null;
+
+    return (
+      <nav className="pagination-controls">
+        {/* PREVIOUS BUTTON */}
+        <button
+          onClick={() => paginate(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="btn btn-sm"
+        >
+          <FaChevronLeft /> Previous
+        </button>
+        {/* NUMBERED PAGE LINKS */}
+        <ul className="pagination-list">
+          {pageNumbers.map((number) => (
+            <li key={number} className="page-item">
+              <button
+                onClick={() => paginate(number)}
+                className={`page-link ${
+                  currentPage === number ? "active" : ""
+                }`}
+              >
+                {number}
+              </button>
+            </li>
+          ))}
+        </ul>
+        {/* NEXT BUTTON */}
+        <button
+          onClick={() => paginate(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="btn btn-sm"
+        >
+          Next <FaChevronRight />
+        </button>
+      </nav>
+    );
+  };
+
   return (
     <div className="admin-layout">
       <nav
@@ -530,11 +244,16 @@ const fetchTimesheets = async () => {
           </button>
         </div>
         <div className="sidebar-header">
-          {!sidebarCollapsed && <h3 className="sidebar-title">APPLICATION ADMIN</h3>}
+          {!sidebarCollapsed && (
+            <h3 className="sidebar-title">APPLICATION ADMIN</h3>
+          )}
           {!sidebarCollapsed && (
             <>
               <div className="current-date">{currentDate}</div>
-              <button onClick={handleLogout} className="btn btn-outline btn-sm logout-btn">
+              <button
+                onClick={handleLogout}
+                className="btn btn-outline btn-sm logout-btn"
+              >
                 Logout
               </button>
             </>
@@ -562,7 +281,10 @@ const fetchTimesheets = async () => {
           ))}
         </ul>
       </nav>
-      <main className="admin-content" style={{ marginLeft: sidebarCollapsed ? 60 : 0 }}>
+      <main
+        className="admin-content"
+        style={{ marginLeft: sidebarCollapsed ? 60 : 0 }}
+      >
         {activeSection === "createTimesheet" && (
           <div className="timesheet-page-content">
             <TimesheetForm onClose={() => setActiveSection("projects")} />
@@ -570,72 +292,147 @@ const fetchTimesheets = async () => {
         )}
         {activeSection === "viewTimesheets" && (
           <div className="timesheet-page-content">
-            <div className="timesheet-controls">
-              <button className="btn btn-toggle" onClick={toggleViewMode}>
-                {viewMode === "grid" ? "Switch to List View" : "Switch to Grid View"}
+            {/* <h2 className="view-title">
+              <FaClipboardList /> View Timesheets
+            </h2> */}
+
+            {/* --- NEW SEARCH BAR --- */}
+            <div className="filter-bar">
+              <div className="styled-search-container">
+                <div className="search-wrapper">
+                  <div className="search-dropdown-wrapper">
+                    <select
+                      value={searchType}
+                      onChange={(e) => setSearchType(e.target.value)}
+                      className="search-dropdown"
+                    >
+                      <option value="foreman">Foreman</option>
+                      <option value="jobCode">Job Code</option>
+                    </select>
+                    <span className="dropdown-arrow">▼</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="What are you looking for..."
+                    className="search-input"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  />
+                  {/* <button
+                    className="camera-btn"
+                    title="Image search (not implemented)"
+                  >
+                    <FaCamera />
+                  </button> */}
+                </div>
+                <button className="search-submit-btn">
+                  <FaSearch />
+                  Search
+                </button>
+              </div>
+
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchType("foreman");
+                  setCurrentPage(1);
+                }}
+              >
+                Clear Filter
               </button>
             </div>
-            {error && <p className="error-message">{error}</p>}
-            <section className={viewMode === "grid" ? "timesheet-grid" : "timesheet-list"}>
-              {timesheets.length ? (
-                timesheets.map((ts) => {
-                  const mapping = mappings[ts.foreman_id];
-                  return (
-                    <article
+            {/* --- END NEW SEARCH BAR --- */}
+
+            {error && <div className="alert alert-error">{error}</div>}
+            {successMessage && (
+              <div className="alert alert-success">{successMessage}</div>
+            )}
+            {timesheets.length ? (
+              <div className="timesheet-list-container">
+                <div className="timesheet-header-row">
+                  <span className="col date-col">Date</span>
+                  <span className="col foreman-col">Foreman</span>
+                  <span className="col job-name-col">Job Name</span>
+                  <span className="col job-code-col">Job Code</span>
+                  <span className="col contract-col">Contract No</span>
+                  <span className="col engineer-col">Project Engineer</span>
+                  <span className="col actions-col">Actions</span>
+                </div>
+                <div className="timesheet-list">
+                  {currentTimesheets.map((ts) => (
+                    <div
                       key={ts.id}
-                      className={`timesheet-card ${expandedCardId === ts.id ? "expanded" : ""}`}
-                      onClick={() => handleCardClick(ts)}
+                      className="timesheet-row"
+                      onClick={(e) => handleRowClick(ts, e)}
                     >
-                      <div className="card-header">
-                        <h2>{ts.timesheet_name}</h2>
-                        <time dateTime={ts.date}>
-                          {new Date(ts.date).toLocaleDateString()}
-                        </time>
-                      </div>
-                      <div className="card-details">
-                        <p>
-                          <strong>Foreman:</strong>{" "}
-                          <span className="foreman-link">{ts.foreman_name}</span>
-                        </p>
-                        {expandedCardId === ts.id && (
-                          <>
-                            {loadingMappings[ts.foreman_id] && <p>Loading crew details...</p>}
-                            {mapping && (
-                              <div className="crew-details-box">
-                                <p>
-                                  <strong>Employees:</strong>{" "}
-                                  {mapping.employees?.map((e) => `${e.first_name} ${e.last_name}`).join(", ") || "N/A"}
-                                </p>
-                                <p>
-                                  <strong>Equipment:</strong>{" "}
-                                  {mapping.equipment?.map((eq) => eq.name).join(", ") || "N/A"}
-                                </p>
-                                <p>
-                                  <strong>Materials and Trucking:</strong>{" "}
-                                  {mapping.materials?.map((mat) => mat.name).join(", ") || "N/A"}
-                                </p>
-                                <p>
-                                  <strong>Work Performed:</strong>{" "}
-                                  {mapping.vendors?.map((ven) => ven.name).join(", ") || "N/A"}
-                                </p>
-                                <p>
-                                  <strong>Dumping Sites:</strong>{" "}
-                                  {mapping.dumping_sites?.map((site) => site.name).join(", ") || "N/A"}
-                                </p>
-                                <p><strong>Job Code:</strong> {ts.data?.job?.job_code || "N/A"}</p>
-                                <p><strong>Phases:</strong> {ts.data?.job?.phase_codes?.join(", ") || "N/A"}</p>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })
-              ) : (
-                <p className="empty-message">No timesheets available.</p>
-              )}
-            </section>
+                      <span className="col date-col">
+                        {new Date(ts.date).toLocaleDateString()}
+                      </span>
+                      <span className="col foreman-col">
+                        {ts.foreman_name || "N/A"}
+                      </span>
+                      <span className="col job-name-col">
+                        {ts.job_name || ts.data?.job?.job_name || "N/A"}
+                      </span>
+                      <span className="col job-code-col">
+                        {ts.data?.job?.job_code || "N/A"}
+                      </span>
+                      <span className="col contract-col">
+                        {ts.data?.contract_no || "N/A"}
+                      </span>
+                      <span className="col engineer-col">
+                        {ts.data?.project_engineer || "N/A"}
+                      </span>
+                      <span className="col actions-col">
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(ts.id);
+                          }}
+                        >
+                          <FaTrash /> Delete
+                        </button>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <PaginationControls />
+              </div>
+            ) : (
+              <p className="empty-message">No timesheets available.</p>
+            )}
+          </div>
+        )}
+        {/* --- Confirmation Modal --- */}
+        {showConfirm && (
+          <div className="confirm-overlay">
+            <div className="confirm-box">
+              <h4>Confirm Deletion</h4>
+              <p>Are you sure you want to delete this timesheet?</p>
+              <div className="confirm-actions">
+                <button className="btn btn-danger" onClick={confirmDelete}>
+                  Yes, Delete
+                </button>
+                <button className="btn btn-secondary" onClick={cancelDelete}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* --- Global Alert Message --- */}
+        {alertMessage && (
+          <div
+            className={`alert ${
+              alertType === "success" ? "alert-success" : "alert-error"
+            }`}
+          >
+            {alertMessage}
           </div>
         )}
       </main>

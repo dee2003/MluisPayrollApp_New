@@ -4,6 +4,7 @@ from datetime import date
 from datetime import date, datetime
 from .models import SubmissionStatus
 from .models import ResourceStatus
+from .models import SubmissionStatus
 
 # --- Shared Pydantic v2 config ---
 model_config = ConfigDict(from_attributes=True)
@@ -17,20 +18,39 @@ class DeleteResponse(BaseModel):
 # ===============================
 #         USERS
 # ===============================
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List
+from .models import UserRole, ResourceStatus # Make sure enums are imported
+
+# --- User Schemas ---
 class UserBase(BaseModel):
+    id: int # Keep id here as your create form sends it
     username: str
     email: EmailStr
     first_name: str
     middle_name: Optional[str] = None
     last_name: str
-    role: str
+    role: UserRole
+    status: ResourceStatus = ResourceStatus.ACTIVE
 
 class UserCreate(UserBase):
+    id: int
     password: str
 
+# --- The Correct UserUpdate Schema ---
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    role: Optional[UserRole] = None
+    status: Optional[ResourceStatus] = None # Allows partial status updates
+
 class User(UserBase):
-    id: int
-    model_config = model_config
+    class Config:
+        from_attributes = True
+
 
 # ===============================
 #         EMPLOYEES
@@ -57,23 +77,72 @@ class Employee(EmployeeBase):
 class EquipmentBase(BaseModel):
     id: str
     name: str
-    category: str  # <--- THIS IS THE FIX: Changed from 'type' to 'category'
     status: str
-    department: Optional[str] = None
-    category_number: Optional[str] = None
     vin_number: Optional[str] = None
+    category_id: Optional[int]
+    department_id: Optional[int]
     model_config = ConfigDict(from_attributes=True)
 
-class EquipmentCreate(EquipmentBase): 
-    pass
+# Original EquipmentCreate
+class EquipmentCreate(BaseModel):
+    id: str
+    name: str
+    category_id: int
+    department_id: int
+    vin_number: Optional[str] = None
+    status: Optional[str] = None
 
-class Equipment(EquipmentBase):
-    model_config = model_config
+# Original EquipmentUpdate
 class EquipmentUpdate(EquipmentBase):
     pass
-class EquipmentInDB(EquipmentBase):
+
+# Original Category and Department Schemas for nesting
+class CategoryBase(BaseModel):
+    id: int
+    name: str
+    number: str
+    
     class Config:
         orm_mode = True
+
+class DepartmentBase(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
+# --- The Crucial Part ---
+# Restoring the original EquipmentInDB and Equipment schemas
+class EquipmentInDB(BaseModel):
+    id: str
+    name: str
+    vin_number: Optional[str]
+    status: str
+    category_id: Optional[int]
+    department_id: Optional[int]
+    category_rel: Optional[CategoryBase]
+    department_rel: Optional[DepartmentBase]
+
+    class Config:
+        orm_mode = True
+
+class Equipment(EquipmentBase):
+    category_rel: Optional[CategoryBase]
+    department_rel: Optional[DepartmentBase]
+
+    class Config:
+        orm_mode = True
+
+# --- New Schemas for Creating Department and Category ---
+# We still need these for the "Add New" feature
+
+class DepartmentCreate(BaseModel):
+    name: str
+
+class CategoryCreate(BaseModel):
+    name: str
+    number: str
 # ===============================
 #         MATERIALS
 # ===============================
@@ -91,17 +160,88 @@ class Material(MaterialBase):
 # ===============================
 #         VENDORS
 # ===============================
-class VendorBase(BaseModel):
-    name: str
-    unit: str
-    status: str
 
-class VendorCreate(VendorBase): 
+# from pydantic import BaseModel
+# from typing import List, Optional
+
+# # ---------- VendorMaterial Schemas ----------
+# class VendorMaterialBase(BaseModel):
+#     material: str
+#     unit: Optional[str] = None
+
+# class VendorMaterialCreate(VendorMaterialBase):
+#     pass
+
+# class VendorMaterialRead(VendorMaterialBase):
+#     id: int
+#     class Config:
+#         orm_mode = True
+
+# # ---------- Vendor Schemas ----------
+# class VendorBase(BaseModel):
+#     name: str
+#     vendor_type: Optional[str]
+#     vendor_category: Optional[str]
+#     status: Optional[str] = "active"
+
+# class VendorCreate(VendorBase):
+#     material_ids: List[int] = []
+
+# class VendorRead(VendorBase):
+#     id: int
+#     materials: List[VendorMaterialRead] = []
+#     class Config:
+#         orm_mode = True
+# schemas.py
+# schemas.py
+from pydantic import BaseModel
+from typing import List, Optional
+
+class VendorMaterialBase(BaseModel):
+    material: str
+    unit: str
+
+class VendorMaterialCreate(VendorMaterialBase):
     pass
 
-class Vendor(VendorBase):
+class VendorMaterialRead(VendorMaterialBase):
     id: int
-    model_config = model_config
+    material: str
+    unit: str
+    class Config:
+        orm_mode = True
+
+# class VendorMaterialRead(BaseModel):
+#     id: int
+#     material: str
+#     unit: str
+#     class Config:
+#         orm_mode = True
+
+
+class VendorCreate(BaseModel):
+    id: int
+    name: str
+    vendor_type: Optional[str] = None
+    vendor_category: Optional[str] = None
+    status: Optional[str] = None
+    material_ids: Optional[List[int]] = []
+
+
+# 🔹 Vendor (read)
+class VendorRead(BaseModel):
+    id: int
+    name: str
+    vendor_type: Optional[str]
+    vendor_category: Optional[str]
+    status: Optional[str]
+    materials: List[VendorMaterialRead] = []
+
+    class Config:
+        orm_mode = True
+
+
+
 
 # ===============================
 #         JOB PHASES
@@ -127,19 +267,25 @@ class JobPhaseBase(BaseModel):
     job_description: Optional[str] = None
     project_engineer: Optional[str] = None
     jurisdiction: Optional[str] = None
+    location_id: Optional[int] = None
+    project_engineer_id: Optional[int] = None  # 👈 new
+    project_engineer: Optional[str] = None     # 👈 keep existing
     status: ResourceStatus = ResourceStatus.ACTIVE
-    phase_codes: List[str] = []  # list of string codes sent from frontend
+    phase_codes: List[str] = []
+    jurisdiction: Optional[str] = None         # ✅ add this line
+
 
 
 class JobPhaseCreate(JobPhaseBase):
     pass
 
 #class JobPhaseUpdate(BaseModel):
-class JobPhaseUpdate(BaseModel):
 
+class JobPhaseUpdate(BaseModel):
     contract_no: Optional[str] = None
     job_description: Optional[str] = None
-    project_engineer: Optional[str] = None
+    project_engineer_id: Optional[int] = None  # 👈 new
+    project_engineer: Optional[str] = None     # 👈 keep existing
     jurisdiction: Optional[str] = None
     status: Optional[ResourceStatus] = None
     phase_codes: Optional[List[str]] = None
@@ -150,11 +296,21 @@ class JobPhase(BaseModel):
     job_code: str
     contract_no: Optional[str] = None
     job_description: Optional[str] = None
+    project_engineer_id: Optional[int] = None
     project_engineer: Optional[str] = None
     jurisdiction: Optional[str] = None
     status: ResourceStatus
     phase_codes: List[PhaseCode] = []
 
+    class Config:
+        orm_mode = True
+
+
+class LocationBase(BaseModel):
+    name: str
+
+class LocationOut(LocationBase):
+    id: int
     class Config:
         orm_mode = True
 
@@ -230,7 +386,18 @@ class CrewMapping(BaseModel):
 
         # If single int or str, wrap in list
         return [int(v)] if is_int_field else [str(v)]
-        
+       
+
+class Vendor(BaseModel):
+    id: int
+    name: str
+    vendor_type: Optional[str]
+    vendor_category: Optional[str]
+    status: Optional[str]
+
+    model_config = ConfigDict(from_attributes=True)
+
+    
 class CrewMappingResponse(BaseModel):
     id: int
     foreman_id: int
@@ -278,7 +445,18 @@ class TimesheetCreate(TimesheetBase):
 
 class TimesheetUpdate(BaseModel):
     data: Optional[Dict[str, Any]] = None
-    status: Optional[str] = None
+    status: Optional[SubmissionStatus] = None
+    date: Optional[date] = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v):
+        if isinstance(v, str):
+            v = v.strip().upper()
+            if v in SubmissionStatus.__members__:
+                return SubmissionStatus[v]
+        return v
+
 class TimesheetFileBase(BaseModel):
     file_path: str
 class TimesheetFile(BaseModel):
@@ -331,27 +509,27 @@ class AppData(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
-class DailySubmissionBase(BaseModel):
-    date: date
-    foreman_id: int
-    job_code: Optional[str] = None
-    total_hours: float
-    ticket_count: int
-    status: SubmissionStatus
-class DailySubmission(DailySubmissionBase):
-    id: int
+# class DailySubmissionBase(BaseModel):
+#     date: date
+#     foreman_id: int
+#     job_code: Optional[str] = None
+#     total_hours: float
+#     ticket_count: int
+#     status: SubmissionStatus
+# class DailySubmission(DailySubmissionBase):
+#     id: int
     
     # Denormalized read-only fields for the supervisor dashboard
-    foreman_name: str
-    job_name: Optional[str] = None  # optional convenience if you resolve job name server-side
+    # foreman_name: str
+    # job_name: Optional[str] = None  # optional convenience if you resolve job name server-side
 
-    class Config:
-        from_attributes = True  # pydantic v2; use orm_mode=True for pydantic v1
-class DailySubmissionCreate(BaseModel):
-    date: date
-    timesheet_ids: List[int]
-    ticket_ids: List[int] = []      # if you have tickets
-    job_code: Optional[str] = None  # optional
+    # class Config:
+    #     from_attributes = True  # pydantic v2; use orm_mode=True for pydantic v1
+# class DailySubmissionCreate(BaseModel):
+#     date: date
+#     timesheet_ids: List[int]
+#     ticket_ids: List[int] = []      # if you have tickets
+#     job_code: Optional[str] = None  # optional
 
 
 # For supervisor requesting changes
@@ -389,23 +567,58 @@ class ValidationResponse(BaseModel):
     unreviewed_timesheets: List[UnreviewedItem] = []
     incomplete_tickets: List[UnreviewedItem] = []
 
-# class TicketSummary(BaseModel):
-#     """Schema for listing tickets."""
-#     id: int
-#     ticket_number: Optional[str] = None
-#     job_name: Optional[str] = None
+from typing import Optional
+from datetime import datetime
 
-#     class Config:
-#         from_attributes = True
-class TicketSummary(BaseModel):
+class TicketBase(BaseModel):
+    foreman_id: int
+    job_phase_id: int
+    image_path: str
+    extracted_text: Optional[str] = None
+    status: Optional[str] = "PENDING"
+    timesheet_id: Optional[int] = None
+    phase_code_id: Optional[int] = None  # ✅ NEW
+
+class TicketCreate(TicketBase):
+    pass
+
+class Ticket(BaseModel):
     id: int
-    image_path: str | None = None
-    job_code: Optional[str] = None
-    phase_code: str | None = None
+    foreman_id: int
+    job_phase_id: int
+    image_path: str
+    extracted_text: Optional[str] = None
+    status: str
+    created_at: Optional[datetime]
+    timesheet_id: Optional[int]
     
+    # ✅ Include the full phase code object (code, description, unit)
+    phase_code: Optional[PhaseCode] = None
+
+    model_config = ConfigDict(from_attributes=True)
+class TicketUpdatePhase(BaseModel):
+    phase_code_id: int
+
+    class Config: True  # replaces orm_mode in Pydantic v2
+class PhaseCodeSchema(BaseModel):
+    id: int
+    code: str
+    description: Optional[str]
 
     class Config:
         from_attributes = True
+
+
+class TicketSummary(BaseModel):
+    id: int
+    image_path: str
+    phase_code_id: Optional[int]
+    phase_code: Optional[PhaseCodeSchema] = None
+
+    class Config:
+        from_attributes = True
+
+
 
 
 class TimesheetSummary(BaseModel):
@@ -443,3 +656,26 @@ class PENotification(BaseModel):
     job_code: Optional[str]
     timesheet_count: int
     ticket_count: int
+
+
+
+
+from typing import Optional
+
+class SupplierBase(BaseModel):
+    concrete_supplier: Optional[str]
+    asphalt_supplier: Optional[str]
+    aggregate_supplier: Optional[str]
+    top_soil_supplier: Optional[str]
+
+class SupplierCreate(SupplierBase):
+    pass
+
+class Supplier(SupplierBase):
+    id: int
+    class Config:
+        orm_mode = True
+class TimesheetCountsResponse(BaseModel):
+    foreman: int
+    supervisor: int
+    project_engineer: int

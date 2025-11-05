@@ -5,11 +5,12 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Type, TypeVar, List
 from fastapi.encoders import jsonable_encoder
-from . import crew_services  # ✅ --- ADD THIS LINE ---
+from . import crew_services, utils_comman  # ✅ --- ADD THIS LINE ---
+from fastapi import Body
 
-from . import models, schemas, utils
+from . import models, schemas
 from .database import get_db
-
+from sqlalchemy.orm import joinedload
 # =======================================================================
 # 1. Generic CRUD Router Factory
 # =======================================================================
@@ -53,22 +54,38 @@ def create_crud_router(
 
         # Automatically hash passwords for the User model
         if model.__name__ == "User" and "password" in item_data:
-            item_data["password"] = utils.hash_password(item_data["password"])
+            item_data["password"] = utils_comman.hash_password(item_data["password"])
         
-        db_item = model(**item_data)
+        # ✅ Filter out non-column keys before model creation
+        allowed_keys = {c.name for c in model.__table__.columns}
+        clean_data = {k: v for k, v in item_data.items() if k in allowed_keys}
+
+        db_item = model(**clean_data)
+
         db.add(db_item)
         db.commit()
         db.refresh(db_item)
         return db_item
 
     # --- READ ALL ---
+    # @router.get("/", response_model=List[response_schema])
+    # def list_items(db: Session = Depends(get_db)):
+    #     query = db.query(model)
+    #     if hasattr(model, 'status'):
+    #     # Filter the query to only include items where the status is not 'inactive'.
+    #         query = query.filter(model.status != models.ResourceStatus.INACTIVE)
+    #     return db.query(model).all()
     @router.get("/", response_model=List[response_schema])
     def list_items(db: Session = Depends(get_db)):
         query = db.query(model)
+        if model.__name__ == "Equipment":
+            query = query.options(
+                orm.joinedload(model.category_rel),
+                orm.joinedload(model.department_rel),
+            )
         if hasattr(model, 'status'):
-        # Filter the query to only include items where the status is not 'inactive'.
             query = query.filter(model.status != models.ResourceStatus.INACTIVE)
-        return db.query(model).all()
+        return query.all()
 
     # --- READ ONE ---
     @router.get("/{item_id}", response_model=response_schema)
@@ -78,62 +95,62 @@ def create_crud_router(
             raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
         return db_item
 
-    # --- UPDATE ---
+
     @router.put("/{item_id}", response_model=response_schema)
-    def update_item(item_id: pk_type, item: create_schema, db: Session = Depends(get_db)):
+    def update_item(item_id: pk_type, item: dict = Body(...), db: Session = Depends(get_db)):
         db_item = db.query(model).filter(pk_column == item_id).first()
         if not db_item:
             raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
         
-        update_data = item.dict(exclude_unset=True)
+        update_data = item
 
-        # 👇 ===== START OF SNAPSHOT INTEGRATION LOGIC ===== 👇
-        
         resource_models = ["Employee", "Equipment", "Material", "Vendor", "DumpingSite"]
         is_resource_status_change = (
             model.__name__ in resource_models and
-            'status' in update_data and
-            hasattr(db_item, 'status') and 
-            db_item.status.value != update_data['status']
+            "status" in update_data and
+            hasattr(db_item, "status") and
+            getattr(db_item.status, "value", db_item.status) != update_data["status"]
         )
 
         if is_resource_status_change:
-            new_status = update_data['status']
-            current_user_id = 1  # Placeholder for logged-in user ID from auth dependency
+            new_status = update_data["status"]
+            current_user_id = 1  # placeholder for auth
+            print(f"✅ Status change detected for {model.__name__} {item_id}: {db_item.status} -> {new_status}")
 
-            # Dynamically access the relationship on CrewMapping (e.g., CrewMapping.employees)
             relationship_attr = getattr(models.CrewMapping, model.__tablename__)
             crews_to_update = db.query(models.CrewMapping).filter(relationship_attr.any(id=item_id)).all()
 
             for crew in crews_to_update:
-                if new_status.lower() == 'inactive':
+                if new_status.lower() == "inactive":
                     notes = f"{model.__name__} '{item_id}' status changed to Inactive."
                     crew_services.create_crew_snapshot(db, crew.id, user_id=current_user_id, notes=notes)
-                    
                     crew.status = "Partially Inactive"
-                    # Dynamically get the list of members from the crew object and filter it
                     member_list = getattr(crew, model.__tablename__)
                     filtered_list = [member for member in member_list if member.id != item_id]
                     setattr(crew, model.__tablename__, filtered_list)
 
-                elif new_status.lower() == 'active':
+                elif new_status.lower() == "active":
                     latest_ref = db.query(models.CrewMappingReference).filter(
                         models.CrewMappingReference.crew_mapping_id == crew.id
                     ).order_by(models.CrewMappingReference.created_at.desc()).first()
-
                     if latest_ref:
                         crew_services.restore_from_reference(db, latest_ref.id)
                     crew.status = "Active"
-        
-        # 👆 ===== END OF SNAPSHOT INTEGRATION LOGIC ===== 👆
 
-        # Apply the original update to the resource itself
+            # ✅ Persist the new status safely
+            db_item.status = new_status
+
+        # ✅ Now update the rest safely (but skip status to prevent overwrite)
         for key, value in update_data.items():
-            setattr(db_item, key, value)
-            
+            if key != "status":
+                setattr(db_item, key, value)
+            if is_resource_status_change:
+                print(f"✅ Status change detected for {model.__name__} {item_id}: {db_item.status} -> {update_data['status']}")
+
         db.commit()
         db.refresh(db_item)
         return db_item
+
 
     # --- DELETE ---
     @router.delete("/{item_id}")
@@ -208,3 +225,78 @@ def get_crew_mapping(db: Session, foreman_id: int):
         "vendors": mapping.vendors,
         "dumping_sites": mapping.dumping_sites,
     }
+
+def get_department_by_name(db: Session, name: str):
+    """Finds a department by its exact name to check for duplicates."""
+    return db.query(models.Department).filter(models.Department.name == name).first()
+
+def create_department(db: Session, department: schemas.DepartmentCreate):
+    """Creates a new department in the database."""
+    db_department = models.Department(name=department.name)
+    db.add(db_department)
+    db.commit()
+    db.refresh(db_department)
+    return db_department
+
+def create_category(db: Session, category: schemas.CategoryCreate):
+    """Creates a new category in the database."""
+    db_category = models.Category(name=category.name, number=category.number)
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+
+
+def create_equipment(db: Session, equipment: schemas.EquipmentCreate):
+    # Get the related category row
+    category_obj = db.query(models.Category).filter(models.Category.id == equipment.category_id).first()
+    db_equipment = models.Equipment(
+        id=equipment.id,
+        name=equipment.name,
+        vin_number=equipment.vin_number,
+        status=equipment.status,
+        department_id=equipment.department_id,
+        category_id=equipment.category_id,
+        category=category_obj.name if category_obj else ""  # Set the name!
+    )
+    db.add(db_equipment)
+    db.commit()
+    db.refresh(db_equipment)
+    return db_equipment
+
+
+
+
+# crud.py
+
+from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from . import models, schemas
+
+# def create_vendor(db: Session, vendor_data: schemas.VendorCreate):
+#     # Convert to dict
+#     vendor_dict = vendor_data.dict()
+    
+#     # Pop out the list of IDs (not a real DB column)
+#     material_ids = vendor_dict.pop("material_ids", [])
+
+#     # Create Vendor without that field
+#     db_vendor = models.Vendor(**vendor_dict)
+
+#     # Attach materials if provided
+#     if material_ids:
+#         materials = db.query(models.VendorMaterial).filter(
+#             models.VendorMaterial.id.in_(material_ids)
+#         ).all()
+
+#         if not materials:
+#             raise HTTPException(status_code=400, detail="No valid material IDs found")
+
+#         db_vendor.materials.extend(materials)
+
+#     db.add(db_vendor)
+#     db.commit()
+#     db.refresh(db_vendor)
+#     return db_vendor
+

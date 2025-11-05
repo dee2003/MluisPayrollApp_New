@@ -16,6 +16,9 @@ import cv2
 import numpy as np
 import torch
 from tqdm import tqdm
+from collections import defaultdict
+from .. import models, database
+from ..database import get_db
 
 # Add backend folder to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -203,158 +206,144 @@ def recognize_line(image_path):
         return ""
 
 
-# ------------------------------------------------------------------- #
-# --- ROUTES --- # shivani code
-# ------------------------------------------------------------------- #
+
+TICKETS_DIR = r"C:\Mluis_App\mluis_app\backend\tickets"
+os.makedirs(TICKETS_DIR, exist_ok=True)
+
 # @router.post("/scan")
 # async def scan_ticket(
+#     foreman_id: int = Form(...),
 #     file: UploadFile = File(...),
-#     db: Session = Depends(database.get_db)
+#     db: Session = Depends(get_db),
 # ):
-#     if not file.content_type.startswith("image/"):
-#         raise HTTPException(status_code=400, detail="File must be an image.")
+#     # ✅ 1. Verify foreman
+#     foreman = db.query(models.User).filter(models.User.id == foreman_id).first()
+#     if not foreman:
+#         raise HTTPException(status_code=404, detail="Foreman not found")
 
-#     unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{os.path.basename(file.filename)}"
-#     saved_image_path = os.path.join(TICKETS_DIR, unique_filename)
-#     debug_scan_dir = os.path.join(DEBUG_DIR, unique_filename)
-#     os.makedirs(debug_scan_dir, exist_ok=True)
-
-#     try:
-#         with open(saved_image_path, "wb") as f:
-#             f.write(await file.read())
-#         image_pil = Image.open(saved_image_path).convert("RGB")
-#         table_result = extract_table_data_yolo(image_pil, debug_scan_dir)
-
-#         if table_result:
-#             print("✅ Table found! Processing as a table.")
-#             db_text = json.dumps(table_result["extracted_table"])
-#             response_data = table_result
-#         else:
-#             print("⚠️ No table found. Falling back to line-by-line segmentation.")
-#             line_result = extract_lines_data(saved_image_path, unique_filename)
-#             if not line_result:
-#                 raise HTTPException(status_code=400, detail="Could not detect any text in the image.")
-#             print("✅ Lines processed successfully.")
-#             db_text = line_result["extracted_text"]
-#             response_data = line_result
-
-#         new_ticket = models.Ticket(
-#             extracted_text=db_text,
-#             image_path=saved_image_path
+#     # ✅ 2. Find active timesheet
+#     timesheet = (
+#         db.query(models.Timesheet)
+#         .filter(
+#             models.Timesheet.foreman_id == foreman_id,
+#             models.Timesheet.status.in_(["PENDING", "DRAFT"])
 #         )
-#         db.add(new_ticket)
-#         db.commit()
-#         db.refresh(new_ticket)
-#         print(f"Saving image to absolute path: {os.path.abspath(saved_image_path)}")
-#         return {"filename": file.filename, "saved_path": saved_image_path, **response_data}
-        
-#     except Exception as e:
-#         if isinstance(e, HTTPException):
-#             raise e
-#         print(f"An unexpected error occurred: {str(e)}")
-#         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
-#     finally:
-#         if os.path.exists(debug_scan_dir):
-#             shutil.rmtree(debug_scan_dir)
+#         .first()
+#     )
+#     if not timesheet:
+#         raise HTTPException(status_code=404, detail="No active timesheet found")
+
+#     # ✅ 3. Save image file safely
+#     file_path = os.path.join(TICKETS_DIR, file.filename)
+#     with open(file_path, "wb") as f:
+#         f.write(await file.read())
+
+#     # ✅ 4. Run YOLO + OCR
+#     image_pil = Image.open(file_path).convert("RGB")
+#     table_result = extract_table_data_yolo(image_pil, "debug_dir")
+#     extracted_text = json.dumps(table_result["extracted_table"]) if table_result else ""
+
+#     # ✅ 5. Save URL (NOT absolute path)
+#     relative_url = f"/media/tickets/{file.filename}"
+
+#     # ✅ 6. Save ticket in DB
+#     ticket = models.Ticket(
+#         foreman_id=foreman_id,
+#         job_phase_id=timesheet.job_phase_id,
+#         timesheet_id=timesheet.id,
+#         image_path=relative_url,  # <-- only the URL
+#         extracted_text=extracted_text
+#     )
+
+#     db.add(ticket)
+#     db.commit()
+#     db.refresh(ticket)
+
+#     # ✅ 7. Return correct response
+#     return {
+#         "message": "Ticket scanned successfully",
+#         "ticket_id": ticket.id,
+#         "timesheet_id": timesheet.id,
+#         "file_url": relative_url
+#     }
 
 
-
-# working code 14/10/2025 evening
-# @router.post("/scan")
-# async def scan_ticket(
-#     file: UploadFile = File(...),
-#     db: Session = Depends(database.get_db)
-# ):
-#     if not file.content_type.startswith("image/"):
-#         raise HTTPException(status_code=400, detail="File must be an image.")
-
-#     unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{os.path.basename(file.filename)}"
-#     saved_image_path = os.path.join(TICKETS_DIR, unique_filename)
-#     debug_scan_dir = os.path.join(DEBUG_DIR, unique_filename)
-#     os.makedirs(debug_scan_dir, exist_ok=True)
-
-#     try:
-#         with open(saved_image_path, "wb") as f:
-#             f.write(await file.read())
-
-#         image_pil = Image.open(saved_image_path).convert("RGB")
-#         table_result = extract_table_data_yolo(image_pil, debug_scan_dir)
-
-#         db_text = json.dumps(table_result["extracted_table"]) if table_result else ""
-
-#         filename_only = os.path.basename(saved_image_path)
-#         relative_url_path = f"/media/tickets/{filename_only}"
-
-#         new_ticket = models.Ticket(
-#             extracted_text=db_text,
-#             image_path=relative_url_path
-#         )
-#         db.add(new_ticket)
-#         db.commit()
-#         db.refresh(new_ticket)
-
-#         return {
-#             "filename": file.filename,
-#             "saved_path": relative_url_path,
-#             "message": "Scanning successful"
-#         }
-
-#     except Exception as e:
-#         if isinstance(e, HTTPException):
-#             raise e
-#         print(f"An unexpected error occurred: {str(e)}")
-#         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
-#     finally:
-#         if os.path.exists(debug_scan_dir):
-#             shutil.rmtree(debug_scan_dir)
 @router.post("/scan")
 async def scan_ticket(
+    foreman_id: int = Form(...),
     file: UploadFile = File(...),
-    foreman_id: int = Form(...),     # ✅ take foreman_id from request
-    db: Session = Depends(database.get_db)
+    timesheet_id: int | None = Form(None),
+    db: Session = Depends(get_db),
 ):
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image.")
+    # 1. Verify foreman
+    foreman = db.query(models.User).filter(models.User.id == foreman_id).first()
+    if not foreman:
+        raise HTTPException(status_code=404, detail="Foreman not found")
 
-    unique_filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{foreman_id}_{os.path.basename(file.filename)}"
-    saved_image_path = os.path.join(TICKETS_DIR, unique_filename)
-    debug_scan_dir = os.path.join(DEBUG_DIR, unique_filename)
-    os.makedirs(debug_scan_dir, exist_ok=True)
-
-    try:
-        # Save uploaded file
-        with open(saved_image_path, "wb") as f:
-            f.write(await file.read())
-
-        image_pil = Image.open(saved_image_path).convert("RGB")
-        table_result = extract_table_data_yolo(image_pil, debug_scan_dir)
-        db_text = json.dumps(table_result["extracted_table"]) if table_result else ""
-
-        relative_url_path = f"/media/tickets/{unique_filename}"
-
-        # ✅ Save ticket linked to foreman_id
-        new_ticket = models.Ticket(
-            foreman_id=foreman_id,
-            extracted_text=db_text,
-            image_path=relative_url_path
+    # 2. Resolve timesheet
+    timesheet = None
+    if timesheet_id:
+        timesheet = db.query(models.Timesheet).filter(models.Timesheet.id == timesheet_id).first()
+    if not timesheet:
+        # pick the best timesheet: exact date (today) or most recent date <= today, else latest
+        today_str = datetime.utcnow().date()  # use UTC or use local if preferred
+        # fetch all timesheets for foreman ordered desc by date
+        ts_list = (
+            db.query(models.Timesheet)
+            .filter(models.Timesheet.foreman_id == foreman_id)
+            .order_by(models.Timesheet.date.desc())
+            .all()
         )
-        db.add(new_ticket)
-        db.commit()
-        db.refresh(new_ticket)
+        if ts_list:
+            # try exact match to today's date
+            for ts in ts_list:
+                if ts.date == today_str:
+                    timesheet = ts
+                    break
+            # else pick the most recent with date <= today
+            if not timesheet:
+                for ts in ts_list:
+                    if ts.date <= today_str:
+                        timesheet = ts
+                        break
+            # fallback to latest
+            timesheet = timesheet or ts_list[0]
 
-        return {
-            "filename": file.filename,
-            "saved_path": relative_url_path,
-            "foreman_id": foreman_id,
-            "message": "Scanning successful"
-        }
+    if not timesheet:
+        raise HTTPException(status_code=404, detail="No timesheet available for this foreman")
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
-    finally:
-        if os.path.exists(debug_scan_dir):
-            shutil.rmtree(debug_scan_dir)
+    # 3. Save image file safely (same as before)
+    file_path = os.path.join(TICKETS_DIR, file.filename)
+    with open(file_path, "wb") as f:
+        f.write(await file.read())
 
+    # 4. Run YOLO + OCR
+    image_pil = Image.open(file_path).convert("RGB")
+    table_result = extract_table_data_yolo(image_pil, "debug_dir")
+    extracted_text = json.dumps(table_result["extracted_table"]) if table_result else ""
+
+    # 5. Save URL (NOT absolute path)
+    relative_url = f"/media/tickets/{file.filename}"
+
+    # 6. Save ticket in DB and link to resolved timesheet
+    ticket = models.Ticket(
+        foreman_id=foreman_id,
+        job_phase_id=timesheet.job_phase_id,
+        timesheet_id=timesheet.id,
+        image_path=relative_url,
+        extracted_text=extracted_text
+    )
+
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+
+    return {
+        "message": "Ticket scanned successfully",
+        "ticket_id": ticket.id,
+        "timesheet_id": timesheet.id,
+        "file_url": relative_url
+    }
 @router.get("/by-foreman/{foreman_id}")
 def get_tickets_by_foreman(foreman_id: int, db: Session = Depends(database.get_db)):
     """
@@ -363,134 +352,49 @@ def get_tickets_by_foreman(foreman_id: int, db: Session = Depends(database.get_d
     tickets = db.query(models.Ticket).filter(models.Ticket.foreman_id == foreman_id).all()
     return tickets
 
-# @router.get("/tickets")
-# def list_tickets(db: Session = Depends(database.get_db)):
-#     tickets = db.query(models.Ticket).all()
-#     return {"tickets": [
-#         {
-#             "id": t.id,
-#             "extracted_text": t.extracted_text,
-#             "extracted_table": getattr(t, "extracted_table", None),  # or customize based on your schema
-#             "image_path": t.image_path
-#         }
-#         for t in tickets
-#     ]}
-from collections import defaultdict
-
-# working code
-# @router.get("/images-by-date")
-# def list_images_by_date(db: Session = Depends(database.get_db)):
-#     from datetime import datetime
-#     from collections import defaultdict
-    
-#     tickets = db.query(models.Ticket).all()
-
-#     grouped = defaultdict(list)
-#     for t in tickets:
-#         # Replace 'created_at' with your actual timestamp field name
-#         timestamp = getattr(t, 'created_at', None)
-#         if timestamp:
-#             date_str = timestamp.strftime("%Y-%m-%d")
-#         else:
-#             # If no timestamp, fallback to today's date
-#             date_str = datetime.today().strftime("%Y-%m-%d")
-
-#         grouped[date_str].append({
-#             "id": t.id,
-#             "image_url": t.image_path
-#         })
-
-#     images_by_date = [{"date": date, "images": imgs} for date, imgs in grouped.items()]
-
-#     return {"imagesByDate": images_by_date}
-
-
-# @router.get("/images-by-date/{foreman_id}")
-# def list_images_by_date(foreman_id: int, db: Session = Depends(database.get_db)):
-#     from datetime import datetime
-#     from collections import defaultdict
-
-#     tickets = db.query(models.Ticket).filter(models.Ticket.foreman_id == foreman_id).all()
-#     grouped = defaultdict(list)
-
-#     for t in tickets:
-#         date_str = t.created_at.strftime("%Y-%m-%d") if t.created_at else datetime.today().strftime("%Y-%m-%d")
-#         grouped[date_str].append({
-#             "id": t.id,
-#             "image_url": t.image_path
-#         })
-#     images_by_date = []
-#     for date, imgs in grouped.items():
-#         submission = db.query(models.DailySubmission).filter_by(
-#             foreman_id=foreman_id,
-#             date=date
-#         ).first()
-
-#         images_by_date.append({
-#             "date": date,
-#             "images": imgs,
-#             "status": submission.status if submission else None,  # e.g., "PENDING_REVIEW", "APPROVED", etc.
-#             "submission_id": submission.id if submission else None,
-#             "ticket_count": len(imgs)
-#         })
-#     return {"imagesByDate": images_by_date}
-
-# @router.get("/")
-# async def root():
-#     return {"message": "OCR API is running successfully!"}
-
-
-
-
-
 @router.get("/images-by-date/{foreman_id}")
 def list_images_by_date(foreman_id: int, db: Session = Depends(database.get_db)):
-    # 1. Fetch all tickets for this foreman
+    """
+    Returns all OCR tickets grouped by date for the given foreman.
+    Tickets show 'submitted' = True only if their status is 'SUBMITTED'.
+    """
+
+    # 1️⃣ Fetch all OCR tickets for this foreman
     all_tickets = (
         db.query(models.Ticket)
         .filter(models.Ticket.foreman_id == foreman_id)
+        .order_by(models.Ticket.created_at.desc())
         .all()
     )
 
-    # 2. Get all submissions for this foreman
-    all_submissions = (
-        db.query(models.DailySubmission)
-        .filter(models.DailySubmission.foreman_id == foreman_id)
-        .all()
-    )
-
-    # 3. Collect all submitted ticket IDs via timesheets
-    submitted_ticket_ids = set()
-    for sub in all_submissions:
-        if sub.timesheets:
-            for ts in sub.timesheets:
-                if ts.ticket_id:
-                    submitted_ticket_ids.add(ts.ticket_id)
-
-    # 4. Group tickets by date and mark submitted ones
+    # 2️⃣ Group tickets by date and mark submission state
     grouped_tickets = defaultdict(list)
     for t in all_tickets:
         date_str = t.created_at.strftime("%Y-%m-%d")
-
         grouped_tickets[date_str].append({
             "id": t.id,
             "image_url": t.image_path,
-            "submitted": t.id in submitted_ticket_ids
+            "submitted": t.status == "SUBMITTED",  # ✅ FIXED HERE
         })
 
-    # 5. Build final response
+    # 3️⃣ Build final response
     images_by_date = []
     for date, imgs in grouped_tickets.items():
-        submission_for_date = next(
-            (s for s in all_submissions if s.date.strftime("%Y-%m-%d") == date),
-            None
+        # Optional: get related timesheet for that date
+        timesheet = (
+            db.query(models.Timesheet)
+            .filter(
+                models.Timesheet.foreman_id == foreman_id,
+                models.Timesheet.date == date
+            )
+            .first()
         )
 
         images_by_date.append({
             "date": date,
             "images": imgs,
-            "status": submission_for_date.status if submission_for_date else None,
-            "submission_id": submission_for_date.id if submission_for_date else None,
+            "status": timesheet.status if timesheet else None,
+            "submission_id": timesheet.id if timesheet else None,
             "ticket_count": len(imgs),
         })
 
@@ -500,3 +404,16 @@ def list_images_by_date(foreman_id: int, db: Session = Depends(database.get_db))
 @router.get("/")
 async def root():
     return {"message": "OCR API is running successfully!"}
+
+
+from fastapi.responses import FileResponse
+
+@router.get("/tickets/{filename}")
+def serve_ticket_image(filename: str):
+    """
+    Serves the uploaded ticket image file.
+    """
+    file_path = os.path.join(TICKETS_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(file_path)
