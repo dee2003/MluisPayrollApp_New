@@ -6,6 +6,9 @@ from collections import defaultdict
 from typing import List
 from pydantic import BaseModel
 from ..database import get_db
+from backend import audit_service
+from backend.models import AuditAction
+from backend.utils.audit_decorator import audit
 
 from .. import models, schemas, database
 
@@ -118,6 +121,8 @@ class TicketUpdatePhaseCode(BaseModel):
     phase_code: str
 
 @router.patch("/{ticket_id}", response_model=schemas.Ticket)
+@audit(action="updated", entity="Ticket")
+
 def update_ticket_phase_code(
     ticket_id: int,
     update: schemas.TicketUpdatePhase,
@@ -135,6 +140,7 @@ def update_ticket_phase_code(
 # 🔹 5️⃣ Submit Tickets
 # ==========================================================
 @router.post("/submit", status_code=status.HTTP_200_OK)
+@audit(action="submitted", entity="Ticket")
 def submit_tickets(payload: dict, db: Session = Depends(database.get_db)):
     ticket_ids = payload.get("ticket_ids", [])
     if not ticket_ids:

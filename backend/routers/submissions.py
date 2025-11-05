@@ -124,7 +124,7 @@ def create_submission(payload: SubmissionPayload, db: Session = Depends(get_db))
     )
 
     # 3️⃣ Update tickets
-    update_values = {"status": "Submitted"}
+    update_values = {"status": "SUBMITTED"}
     if timesheet:
         update_values["timesheet_id"] = timesheet.id  # Link tickets to timesheet if exists
 

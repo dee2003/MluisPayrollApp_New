@@ -5,6 +5,7 @@ print("📂 Loaded vendor_router from:", os.path.abspath(__file__))
 from fastapi import APIRouter, Depends, HTTPException, status,  Body
 from sqlalchemy.orm import Session
 from typing import List
+from sqlalchemy.orm import selectinload
 
 from .. import models, schemas, database
 from ..schemas import VendorCreate, MaterialCreate

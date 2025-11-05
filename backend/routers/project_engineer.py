@@ -6,8 +6,6 @@ from .. import models, database
 from typing import List
 from .. import models, schemas
 from ..database import get_db
-from ..models import User, UserRole
-
 router = APIRouter(prefix="/api/project-engineer", tags=["Project Engineer"])
 
 @router.get("/dashboard")
@@ -129,7 +127,7 @@ def get_timesheet_for_pe_review(
 
     return timesheet
 
-
+from ..models import User, UserRole
 
 @router.get("/", response_model=List[schemas.User])
 def get_project_engineers(db: Session = Depends(get_db)):

@@ -309,25 +309,26 @@ class ResourceStatus(str, enum.Enum):
 # In models.py
 
 class SubmissionStatus(str, enum.Enum):
-    # --- CORRECTED VALUES ---
-    PENDING = "Pending"
-    SUBMITTED = "Submitted"
-    APPROVED = "Approved"
-    REJECTED = "Rejected"
-    # It's also good practice to include the 'draft' status
-    # that your endpoint can use as a default.
-    DRAFT = "draft" 
-    SENT = "Sent"          # 👈 add this line
+    PENDING = "PENDING"
+    SUBMITTED = "SUBMITTED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    DRAFT = "DRAFT"
+    SENT = "Sent"
+    IN_PROGRESS = "IN_PROGRESS" 
+    SUBMITTED_TO_ENGINEER = "SubmittedToEngineer"  # ✅ add this
+
+
 
 
 class AuditAction(str, enum.Enum):
-    CREATED = "created"
-    UPDATED = "updated"
-    DELETED = "deleted"
-    SUBMITTED = "submitted"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    REVIEWED = "reviewed"
+    CREATED = "CREATED"
+    UPDATED = "UPDATED"
+    DELETED = "DELETED"
+    SUBMITTED = "SUBMITTED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    REVIEWED = "REVIEWED"
 
 # ============================================================================== #
 # 2. ASSOCIATION TABLES (FOR MANY-TO-MANY RELATIONSHIPS)
@@ -381,29 +382,6 @@ class SoftDeleteMixin:
 # 4. CORE DATA MODELS
 # ============================================================================== #
 
-# class User(Base):
-#     __tablename__ = "users"
-#     id = Column(Integer, primary_key=True, unique=True, nullable=False)
-#     username = Column(String, unique=True, index=True, nullable=False)
-#     email = Column(String, unique=True, index=True, nullable=False)
-#     first_name = Column(String, nullable=False)
-#     middle_name = Column(String, nullable=True)
-#     last_name = Column(String, nullable=False)
-#     password = Column(String, nullable=False)  # Hashed password
-#     role = Column(SQLAlchemyEnum(UserRole), nullable=False)
-
-#     # Relationships
-#     tickets = relationship("Ticket", back_populates="foreman", cascade="all, delete-orphan")
-#     timesheets = relationship(
-#         "Timesheet", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
-#     )
-#     crew_mappings = relationship(
-#         "CrewMapping", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
-#     )
-#     assigned_jobs = relationship("ForemanJob", back_populates="foreman", cascade="all, delete-orphan")
-#     foreman_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.foreman_id]")
-#     supervisor_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.supervisor_id]")
-#     engineer_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.engineer_id]")
 
 class Employee(Base):
     __tablename__ = "employees"
@@ -534,6 +512,7 @@ class JobPhase(Base):
     status = Column(String, default="Active")
     assigned_foremen = relationship("ForemanJob", back_populates="job_phase")
     project_engineer_id = Column(Integer, ForeignKey("users.id"))
+    jurisdiction = Column(String, nullable=True)  # ✅ Add this line
 
     # ✅ Correct relationship (MUST have cascade)
     phase_codes = relationship(
@@ -618,8 +597,8 @@ class Timesheet(Base):
     job_phase_id = Column(Integer, ForeignKey("job_phases.id"), nullable=False, index=True)
     date = Column(Date, default=date.today, nullable=False)
     status = Column(
-        SQLAlchemyEnum(SubmissionStatus, name="submissionstatus", create_type=False), 
-        nullable=False, 
+        SQLAlchemyEnum(SubmissionStatus, name="submissionstatus", create_type=False),
+        nullable=False,
         default=SubmissionStatus.DRAFT
     )
     sent_date = Column(DateTime(timezone=True), server_default=func.now())  # 👈 auto set when created
@@ -800,9 +779,34 @@ class SupervisorSubmission(Base):
     submitted_at = Column(DateTime, default=datetime.utcnow)
 
 
+# class User(Base):
+#     __tablename__ = "users"
+#     id = Column(Integer, primary_key=True, unique=True, nullable=False)
+#     username = Column(String, unique=True, index=True, nullable=False)
+#     email = Column(String, unique=True, index=True, nullable=False)
+#     first_name = Column(String, nullable=False)
+#     middle_name = Column(String, nullable=True)
+#     last_name = Column(String, nullable=False)
+#     password = Column(String, nullable=False)  # Hashed password
+#     role = Column(SQLAlchemyEnum(UserRole), nullable=False)
+
+#     # Relationships
+#     tickets = relationship("Ticket", back_populates="foreman", cascade="all, delete-orphan")
+#     timesheets = relationship(
+#         "Timesheet", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
+#     )
+#     crew_mappings = relationship(
+#         "CrewMapping", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
+#     )
+#     assigned_jobs = relationship("ForemanJob", back_populates="foreman", cascade="all, delete-orphan")
+#     foreman_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.foreman_id]")
+#     supervisor_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.supervisor_id]")
+#     engineer_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.engineer_id]")
+
+
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, unique=True, nullable=False)
+    id = Column(Integer, primary_key=True, unique=True, nullable=False)  # manually assigned
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     first_name = Column(String, nullable=False)
@@ -810,9 +814,10 @@ class User(Base):
     last_name = Column(String, nullable=False)
     password = Column(String, nullable=False)  # Hashed password
     role = Column(SQLAlchemyEnum(UserRole), nullable=False)
+    status = Column(SQLAlchemyEnum(ResourceStatus), nullable=False, default=ResourceStatus.ACTIVE)
 
     # Relationships
-    tickets = relationship("Ticket", back_populates="foreman", cascade="all, delete-orphan")
+    tickets = relationship("Ticket", back_populates="foreman")
     timesheets = relationship(
         "Timesheet", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
     )

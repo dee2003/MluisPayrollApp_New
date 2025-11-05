@@ -4,15 +4,74 @@ from typing import List,Optional
 from .. import models, schemas
 from ..database import get_db
 import os
+from .. import models, schemas # This line already imports your schemas
+
 import pandas as pd
 import json
 from datetime import datetime
+from backend import audit_service
+from backend.models import AuditAction
+from backend.utils.audit_decorator import audit
 router = APIRouter(
     prefix="/api/timesheets",
     tags=["Timesheets"]
 )
 from datetime import datetime
+from sqlalchemy import func, case
+from .. import models, schemas, database
+
+from sqlalchemy import String, literal
+
+@router.get("/counts-by-status", response_model=schemas.TimesheetCountsResponse)
+def get_timesheet_counts_by_status(db: Session = Depends(get_db)):
+    try:
+        # ✅ Ensure values match DB enum exactly
+        foreman_statuses = [
+            models.SubmissionStatus.DRAFT.value,
+            models.SubmissionStatus.PENDING.value,
+            models.SubmissionStatus.REJECTED.value,
+        ]
+
+        supervisor_statuses = [
+            models.SubmissionStatus.SUBMITTED.value,
+            models.SubmissionStatus.SENT.value,  # -> "Sent"
+        ]
+
+        engineer_status = models.SubmissionStatus.APPROVED.value
+
+        counts_query = db.query(
+            func.count(
+                case((models.Timesheet.status.cast(String).in_(foreman_statuses), 1))
+            ).label("foreman_total"),
+
+            func.count(
+                case((models.Timesheet.status.cast(String).in_(supervisor_statuses), 1))
+            ).label("supervisor_total"),
+
+            func.count(
+                case((models.Timesheet.status.cast(String) == engineer_status, 1))
+            ).label("engineer_total")
+        ).first()
+
+        print("DEBUG foreman_statuses:", foreman_statuses)
+        print("DEBUG supervisor_statuses:", supervisor_statuses)
+
+        return {
+            "foreman": int(counts_query.foreman_total or 0),
+            "supervisor": int(counts_query.supervisor_total or 0),
+            "project_engineer": int(counts_query.engineer_total or 0),
+        }
+
+    except Exception as e:
+        print(f"[ERROR] Failed to calculate timesheet counts: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while calculating timesheet counts."
+        )
+
+    
 @router.post("/", response_model=schemas.Timesheet)
+@audit(action="CREATED", entity="Timesheet")
 def create_timesheet(timesheet: schemas.TimesheetCreate, db: Session = Depends(get_db)):
     data_to_store = timesheet.data or {}
 
@@ -30,7 +89,7 @@ def create_timesheet(timesheet: schemas.TimesheetCreate, db: Session = Depends(g
         foreman_id=timesheet.foreman_id,
         job_phase_id=timesheet.job_phase_id,
         date=timesheet.date,
-        status="draft",                 # Always starts as draft
+        status="DRAFT",                 # ✅ Use uppercase (matches enum)
         data=data_to_store,             # JSONB payload
         timesheet_name=job_name         # Readable name in admin panel
     )
@@ -39,6 +98,7 @@ def create_timesheet(timesheet: schemas.TimesheetCreate, db: Session = Depends(g
     db.commit()
     db.refresh(db_ts)
     return db_ts
+
 
 
 @router.get("/by-foreman/{foreman_id}", response_model=List[schemas.Timesheet])
@@ -72,14 +132,14 @@ def get_timesheets_for_supervisor(
     date: Optional[str] = Query(None),
 ):
     """
-    Returns all Submitted timesheets for supervisors to review.
+    Returns all SUBMITTED timesheets for supervisors to review.
     Filters by foreman_id and/or work date (timesheet.date).
     """
     # Use "status" instead of "sent"
     query = (
         db.query(models.Timesheet)
         .options(joinedload(models.Timesheet.files))
-        .filter(models.Timesheet.status == "Submitted")
+        .filter(models.Timesheet.status == "SUBMITTED")
     )
 
     if foreman_id is not None:
@@ -96,6 +156,8 @@ def get_timesheets_for_supervisor(
     timesheets = query.order_by(models.Timesheet.updated_at.desc()).all()
 
     return timesheets
+
+
 @router.get("/{timesheet_id}", response_model=schemas.Timesheet)
 def get_single_timesheet(timesheet_id: int, db: Session = Depends(get_db)):
     """
@@ -161,6 +223,8 @@ def get_single_timesheet(timesheet_id: int, db: Session = Depends(get_db)):
     return timesheet
 
 @router.put("/{timesheet_id}", response_model=schemas.Timesheet)
+@audit(action="UPDATED", entity="Timesheets")
+
 def update_timesheet(
     timesheet_id: int,
     timesheet_update: schemas.TimesheetUpdate,
@@ -175,6 +239,8 @@ def update_timesheet(
 
     if "data" in payload:
         ts.data = payload["data"]
+    if "status" in payload and payload["status"] == "IN_PROGRESS":
+        ts.status = SubmissionStatus.IN_PROGRESS
     if "status" in payload:
         ts.status = payload["status"]
 
@@ -240,7 +306,7 @@ def update_timesheet(
             create_dumping_site_df(data.get("dumping_sites", [])).to_excel(writer, index=False, sheet_name="DumpingSites")
 
         # ✅ Replace ngrok link with your own base URL
-        NGROK_BASE_URL = "https://coated-nonattributive-babara.ngrok-free.dev"
+        NGROK_BASE_URL = "https://cb12ad463b90.ngrok-free.app"
         file_url = f"{NGROK_BASE_URL}/storage/{ts_date_str}/{file_name}"
 
         # ✅ Save file info in DB
@@ -296,6 +362,8 @@ def send_timesheet(timesheet_id: int, db: Session = Depends(get_db)):
 # DELETE a timesheet
 # -------------------------------
 @router.delete("/{timesheet_id}", status_code=status.HTTP_204_NO_CONTENT)
+@audit(action="Deleted", entity="Timesheets")
+
 def delete_timesheet(timesheet_id: int, db: Session = Depends(get_db)):
     ts = db.query(models.Timesheet).filter(models.Timesheet.id == timesheet_id).first()
     if not ts:
@@ -331,6 +399,7 @@ def list_timesheets(db: Session = Depends(get_db)):
         
     return response
 from sqlalchemy import or_
+from ..models import SubmissionStatus  # ✅ use your enum safely
 
 @router.get("/drafts/by-foreman/{foreman_id}", response_model=List[schemas.Timesheet])
 def get_draft_timesheets_by_foreman(foreman_id: int, db: Session = Depends(get_db)):
@@ -342,27 +411,66 @@ def get_draft_timesheets_by_foreman(foreman_id: int, db: Session = Depends(get_d
         db.query(models.Timesheet)
         .options(joinedload(models.Timesheet.files))
         .filter(models.Timesheet.foreman_id == foreman_id)
-        .filter(or_(models.Timesheet.status == 'Pending', models.Timesheet.status == 'draft'))
+        .filter(
+            or_(
+                models.Timesheet.status == SubmissionStatus.PENDING
+
+            )
+        )
         .order_by(models.Timesheet.date.desc())
         .all()
     )
     return timesheets
+
+
+# @router.post("/timesheets/save-draft/")
+# def save_draft(timesheet: schemas.TimesheetCreate, db: Session = Depends(get_db)):
+#     """
+#     Save a timesheet draft. Each save creates a new row.
+#     """
+#     new_ts = models.Timesheet(
+#         foreman_id=timesheet.foreman_id,
+#         job_name=timesheet.job_name,
+#         date=datetime.utcnow(),
+#         status=SubmissionStatus.DRAFT,  # ✅ ENUM-safe value
+#         data=json.dumps(timesheet.data)  # store JSON as string
+#     )
+#     db.add(new_ts)
+#     db.commit()
+#     db.refresh(new_ts)
+#     return {"message": "Draft saved", "timesheet_id": new_ts.id}
+
 @router.post("/timesheets/save-draft/")
 def save_draft(timesheet: schemas.TimesheetCreate, db: Session = Depends(get_db)):
     """
-    Save a timesheet draft. Each save creates a new row.
+    Save or update a timesheet draft.
+    - If timesheet.id exists -> update existing draft.
+    - Else -> create new draft.
     """
+    # ✅ 1. Check if it's an existing draft
+    if timesheet.id:
+        existing_ts = db.query(models.Timesheet).filter(models.Timesheet.id == timesheet.id).first()
+        if existing_ts:
+            existing_ts.data = json.dumps(timesheet.data)
+            existing_ts.job_name = timesheet.job_name
+            existing_ts.status = SubmissionStatus.DRAFT  # always save as draft
+            existing_ts.date = datetime.utcnow()
+            db.commit()
+            db.refresh(existing_ts)
+            return {"message": "Draft updated", "timesheet_id": existing_ts.id}
+
+    # ✅ 2. Else, create a new draft
     new_ts = models.Timesheet(
         foreman_id=timesheet.foreman_id,
         job_name=timesheet.job_name,
         date=datetime.utcnow(),
-        status="draft",
-        data=json.dumps(timesheet.data)  # store JSON as string
+        status=SubmissionStatus.DRAFT,
+        data=json.dumps(timesheet.data)
     )
     db.add(new_ts)
     db.commit()
     db.refresh(new_ts)
-    return {"message": "Draft saved", "timesheet_id": new_ts.id}
+    return {"message": "Draft created", "timesheet_id": new_ts.id}
 
 @router.get("/timesheets/drafts/by-foreman/{foreman_id}")
 def get_drafts(foreman_id: int, db: Session = Depends(get_db)):
@@ -372,16 +480,13 @@ def get_drafts(foreman_id: int, db: Session = Depends(get_db)):
     drafts = (
         db.query(models.Timesheet)
         .filter(models.Timesheet.foreman_id == foreman_id)
-        .filter(models.Timesheet.status == "draft")
+        .filter(models.Timesheet.status == SubmissionStatus.DRAFT)  # ✅ uppercase ENUM
         .order_by(models.Timesheet.date.desc())
         .all()
     )
+
     # Convert JSON string to dict
     return [
         {**{"id": t.id, "job_name": t.job_name, "date": t.date}, **json.loads(t.data)}
         for t in drafts
     ]
-
-
-
-

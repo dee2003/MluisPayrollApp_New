@@ -5,10 +5,10 @@ import {
   FaArrowLeft,
   FaChevronLeft,
   FaChevronRight,
-  FaRegEdit, // Corresponds to 'createTimesheet'
-  FaClipboardList, // Corresponds to 'viewTimesheets'
+  FaRegEdit,
+  FaClipboardList,
 } from "react-icons/fa";
-import "./ApplicationAdmin.css"; // Reuse your form/dashboard CSS
+import "./ApplicationAdmin.css";
 
 const API_URL = "http://127.0.0.1:8000/api";
 
@@ -17,16 +17,11 @@ const TimesheetDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // --- State for Timesheet Data (Original) ---
-  const [ts, setTs] = useState(location.state?.timesheet || null);
+  const [ts, setTs] = useState(null); // Start with null to ensure fresh data is fetched
   const [foremanData, setForemanData] = useState(null);
 
-  // --- State and Logic for Sidebar (Copied from the provided code) ---
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
-  // Set the active section based on the current route/context. 
-  // Since we are viewing a timesheet, we'll keep 'viewTimesheets' active.
-  const activeSection = 'viewTimesheets'; 
+  const activeSection = 'viewTimesheets';
 
   const currentDate = useMemo(() => {
     return new Date().toLocaleDateString("en-US", {
@@ -39,10 +34,7 @@ const TimesheetDetails = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
-    // In a real application, you'd navigate to the login page after clearing the token.
-    // For this example, we'll navigate to the root or reload.
-    window.location.reload(); 
-    // navigate('/login'); 
+    window.location.reload();
   };
 
   const sections = ["createTimesheet", "viewTimesheets"];
@@ -57,41 +49,36 @@ const TimesheetDetails = () => {
         return <FaRegEdit className="icon" />;
     }
   };
-  // --- End Sidebar Logic ---
 
-  // --- Data Fetching Logic (Original) ---
-
+  // Fetch data whenever the component mounts or the ID changes
   useEffect(() => {
-    if (!ts) {
+    if (id) {
       axios.get(`${API_URL}/timesheets/${id}/`)
-  .then((res) => {
-    console.log("Full Timesheet Response:", res.data);
-    setForemanData(res.data.data); // ✅ set only the nested 'data' field
-  })
-  .catch((err) => console.error("Failed to fetch timesheet details:", err));
-
+        .then((res) => {
+          console.log("API Response for Timesheet:", res.data.data);
+          setTs(res.data.data);
+        })
+        .catch((err) => console.error("Failed to fetch timesheet details:", err));
     }
-  }, [id, ts]);
+  }, [id]);
 
   useEffect(() => {
     if (ts?.foreman_id) {
-      axios
-        .get(`${API_URL}/crew-mapping/by-foreman/${ts.foreman_id}`)
+      axios.get(`${API_URL}/crew-mapping/by-foreman/${ts.foreman_id}`)
         .then((res) => {
-  console.log("Foreman Data API response:", res.data);
-  setForemanData(res.data);
-})
+          setForemanData(res.data);
+        })
         .catch((err) => console.error("Failed to fetch foreman data:", err));
     }
   }, [ts]);
 
-  if (!ts) return <p>Loading...</p>;
-
-  // --- Render Layout with Sidebar and Main Content ---
+  if (!ts) {
+    return <p>Loading...</p>;
+  }
 
   return (
     <div className="admin-layout">
-      {/* --- Sidebar (Copied Structure) --- */}
+      {/* Sidebar Section */}
       <nav
         className={`admin-sidebar ${sidebarCollapsed ? "collapsed" : ""}`}
         style={{ width: sidebarCollapsed ? 60 : 250 }}
@@ -105,7 +92,6 @@ const TimesheetDetails = () => {
             {sidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
           </button>
         </div>
-
         <div className="sidebar-header">
           {!sidebarCollapsed && <h3 className="sidebar-title">APPLICATION ADMIN</h3>}
           {!sidebarCollapsed && (
@@ -117,29 +103,17 @@ const TimesheetDetails = () => {
             </>
           )}
         </div>
-
         <ul className="sidebar-nav">
           {sections.map((sec) => (
             <li key={sec}>
               <button
-                // Modified: Navigate using react-router-dom instead of just setting local state
-                onClick={() => {
-if (sec === "viewTimesheets") {
-  navigate("/", { state: { section: "viewTimesheets", refresh: Date.now() } });
-} else if (sec === "createTimesheet") {
-  navigate("/", { state: { section: "createTimesheet", refresh: Date.now() } });
-}
-
-}}
-
+                onClick={() => navigate("/", { state: { section: sec, refresh: Date.now() } })}
                 className={activeSection === sec ? "active" : ""}
               >
                 {getIconForSection(sec)}
                 {!sidebarCollapsed && (
                   <span className="label">
-                    {sec === "createTimesheet"
-                      ? "Create Timesheet"
-                      : "View Timesheets"}
+                    {sec === "createTimesheet" ? "Create Timesheet" : "View Timesheets"}
                   </span>
                 )}
               </button>
@@ -148,31 +122,21 @@ if (sec === "viewTimesheets") {
         </ul>
       </nav>
 
-      {/* --- Main Content (Original TimesheetDetails) --- */}
-      <div 
+      {/* Main Content Section */}
+      <div
         className="main-content"
-        // Ensure the main content shifts based on the sidebar state
-        style={{ marginLeft: sidebarCollapsed ? 60 : 30 }}
+        style={{ marginLeft: sidebarCollapsed ? 60 : 250 }}
       >
         <div className="page-header">
-         <button 
-  className="back-btn" 
- onClick={() => 
-                    navigate("/", { 
-                        state: { 
-                            section: "viewTimesheets", 
-                            refresh: Date.now() 
-                        } 
-                    })
-                }
-            >
-  <FaArrowLeft /> Back
-</button>
-
+          <button
+            className="back-btn"
+            onClick={() => navigate("/", { state: { section: "viewTimesheets", refresh: Date.now() } })}
+          >
+            <FaArrowLeft /> Back
+          </button>
           <h2 className="page-title">{ts.timesheet_name}</h2>
         </div>
 
-        {/* Job Info */}
         <div className="section">
           <h3 className="section-title">Job Information</h3>
           <table className="details-table">
@@ -180,43 +144,72 @@ if (sec === "viewTimesheets") {
               <tr>
                 <th>Date</th>
                 <th>Foreman</th>
+                <th>Supervisor</th>
                 <th>Job Code</th>
                 <th>Job Name</th>
               </tr>
             </thead>
-            
             <tbody>
               <tr>
                 <td>{new Date(ts.date).toLocaleDateString()}</td>
                 <td>{ts.foreman_name || "N/A"}</td>
-                <td>{ts.data?.job?.job_code || "N/A"}</td>
-                <td>{ts.job_name || ts.data?.job?.job_name || "N/A"}</td>
+                <td>{ts.supervisor?.name || "N/A"}</td>
+                <td>{ts.job?.job_code || "N/A"}</td>
+                <td>{ts.job_name || ts.job?.job_name || "N/A"}</td>
               </tr>
             </tbody>
           </table>
         </div>
-        {/* Additional Job Details */}
-<div className="section">
-  {/* <h3 className="section-title">Additional Job Details</h3> */}
-  <table className="details-table">
-    <thead>
-      <tr>
-        <th>Contract No</th>
-        <th>Location</th>
-        <th>Work Description</th>
-        <th>Day or Night</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>{ts.data?.contract_no || "N/A"}</td>
-        <td>{ts.data?.location || "N/A"}</td>
-        <td>{ts.data?.work_description || "N/A"}</td>
-        <td>{ts.data?.time_of_day || "N/A"}</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+
+        <div className="section">
+          <table className="details-table">
+            <thead>
+              <tr>
+                <th>Contract No</th>
+                <th>Location</th>
+                <th>Work Description</th>
+                <th>Day or Night</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{ts.contract_no || "N/A"}</td>
+                <td>{ts.location || "N/A"}</td>
+                <td>{ts.work_description || "N/A"}</td>
+                <td>{ts.time_of_day || "N/A"}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="section">
+          <h3 className="section-title">Phase Details</h3>
+          <table className="details-table">
+            <thead>
+              <tr>
+                <th>Phase Codes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <ul>
+                    {ts.job?.phase_codes?.length > 0 ? (
+                      ts.job.phase_codes.map((code, index) => (
+                        <li key={index}>{code}</li>
+                      ))
+                    ) : (
+                      <li>N/A</li>
+                    )}
+                  </ul>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+
+
 
         {/* Crew Info */}
         {foremanData && (
@@ -238,9 +231,7 @@ if (sec === "viewTimesheets") {
                     <ul>
                       {foremanData.employees?.length ? (
                         foremanData.employees.map((e, i) => (
-                          <li key={i}>
-                            {e.first_name} {e.last_name}
-                          </li>
+                          <li key={i}>{e.first_name} {e.last_name}</li>
                         ))
                       ) : (
                         <li>N/A</li>
@@ -318,47 +309,43 @@ if (sec === "viewTimesheets") {
           </table>
         </div>
 
-        {/* Asphalt Details */}
-       <div className="section-row">
-  {/* Asphalt Details */}
-  <div className="section half">
-    <h3 className="section-title">Asphalt Details</h3>
-    <table className="details-table">
-      <thead>
-        <tr>
-          <th>Supplier</th>
-          <th>Order Details</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>{ts.data?.asphalt_supplier || "N/A"}</td>
-          <td>{ts.data?.asphalt_order_details || "N/A"}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  {/* Aggregate Details */}
-  <div className="section half">
-    <h3 className="section-title">Aggregate Details</h3>
-    <table className="details-table">
-      <thead>
-        <tr>
-          <th>Supplier</th>
-          <th>Order Details</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>{ts.data?.aggregate_supplier || "N/A"}</td>
-          <td>{ts.data?.aggregate_order_details || "N/A"}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
+        {/* Asphalt and Aggregate Details */}
+        <div className="section-row">
+          <div className="section half">
+            <h3 className="section-title">Asphalt Details</h3>
+            <table className="details-table">
+              <thead>
+                <tr>
+                  <th>Supplier</th>
+                  <th>Order Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{ts.data?.asphalt_supplier || "N/A"}</td>
+                  <td>{ts.data?.asphalt_order_details || "N/A"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="section half">
+            <h3 className="section-title">Aggregate Details</h3>
+            <table className="details-table">
+              <thead>
+                <tr>
+                  <th>Supplier</th>
+                  <th>Order Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{ts.data?.aggregate_supplier || "N/A"}</td>
+                  <td>{ts.data?.aggregate_order_details || "N/A"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* Top Soil Details */}
         <div className="section">
