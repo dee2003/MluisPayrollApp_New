@@ -111,7 +111,8 @@ const getIconForSection = (sec) => {
 };
 
 // --- Generic Form Component (Unchanged) ---
-const GenericForm = ({ fields, onSubmit, defaultValues = {}, errorMessage, genericErrorMessage, categories = [] }) => {
+
+const GenericForm = ({ fields,vendorOptions, fetchVendorOptions, onSubmit, defaultValues = {}, errorMessage,genericErrorMessage, categories = [] }) => {
     const [formData, setFormData] = useState(defaultValues);
     const [errors, setErrors] = useState({}); // Add this state for inline errors
 
@@ -125,6 +126,27 @@ const GenericForm = ({ fields, onSubmit, defaultValues = {}, errorMessage, gener
         return initialValues;
     });
 
+    const [vendorData, setVendorData] = useState({
+  id: "",
+  name: "",
+  vendor_type: "",
+  vendor_category: "",
+  status: "ACTIVE",
+  materials: [{ material: "", unit: "" }],
+});
+
+const handleMaterialChange = (index, field, value) => {
+  const newMaterials = [...vendorData.materials];
+  newMaterials[index][field] = value;
+  setVendorData({ ...vendorData, materials: newMaterials });
+};
+
+const addMaterialRow = () => {
+  setVendorData({
+    ...vendorData,
+    materials: [...vendorData.materials, { material: "", unit: "" }],
+  });
+};
 
     const validateField = (name, value) => {
         let error = "";
@@ -216,75 +238,276 @@ const handleSubmit = e => {
     //   return;
     // }
     console.log("Submitting form values:", values);
+    values.materials = vendorData.materials;
     onSubmit(values);
   }
 };
 
 
-return (
-    <form onSubmit={handleSubmit}>
-        {genericErrorMessage && <div className="form-error-top">{genericErrorMessage}</div>}
+// return (
+//     <form onSubmit={handleSubmit}>
+//         {genericErrorMessage && <div className="form-error-top">{genericErrorMessage}</div>}
         
-        {fields.map(field => (
-            <div className="form-group" key={field.name}>
-                <label className="form-label">
-                    {field.label}
-                    {field.required && <span style={{ color: 'red' }}> *</span>}
-                </label>
+//         {fields.map(field => (
+//             <div className="form-group" key={field.name}>
+//                 <label className="form-label">
+//                     {field.label}
+//                     {field.required && <span style={{ color: 'red' }}> *</span>}
+//                 </label>
 
-                {/* This wrapper aligns the input and the "Add New" button side-by-side */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+//                 {/* This wrapper aligns the input and the "Add New" button side-by-side */}
+//                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
 
-                    {/* This div makes the input/select take up the available space */}
-                    <div style={{ flex: 1 }}>
-                        {field.type === "select" ? (
-                            <select name={field.name} className="form-control" value={values[field.name] || ""} onChange={handleChange}>
-                                {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                            </select>
-                        ) : (
-                            <input
-                                type={field.type || "text"}
+//                     {/* This div makes the input/select take up the available space */}
+//                     <div style={{ flex: 1 }}>
+//                         {field.type === "select" ? (
+//                             <select name={field.name} className="form-control" value={values[field.name] || ""} onChange={handleChange}>
+//                                 {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+//                             </select>
+//                         ) : (
+//                             <input
+//                                 type={field.type || "text"}
                              
-                                name={field.name}
-                                className="form-control"
-                                value={values[field.name] || ""}
-                                onChange={handleChange}
-                                required={field.required}
-                                readOnly={field.readOnly || false}
+//                                 name={field.name}
+//                                 className="form-control"
+//                                 value={values[field.name] || ""}
+//                                 onChange={handleChange}
+//                                 required={field.required}
+//                                 readOnly={field.readOnly || false}
 
-                                autoComplete={field.type === "password" ? "new-password" : "off"}
-                            />
-                        )}
-                    </div>
+//                                 autoComplete={field.type === "password" ? "new-password" : "off"}
+//                             />
+//                         )}
+//                     </div>
 
-                    {/* --- CHANGE IS HERE --- */}
-                    {/* This code checks if a field should have an "Add New" button and renders it */}
-                    {field.onAddNew && (
-                        <button
-                            type="button"
-                            onClick={field.onAddNew}
-                            className="btn btn-sm btn-outline"
-                            style={{ whiteSpace: 'nowrap' }} // Keeps "Add New" on one line
-                        >
-                            Add New
-                        </button>
-                    )}
-                    {/* --- END OF CHANGE --- */}
+//                     {/* --- CHANGE IS HERE --- */}
+//                     {/* This code checks if a field should have an "Add New" button and renders it */}
+//                     {field.onAddNew && (
+//                         <button
+//                             type="button"
+//                             onClick={field.onAddNew}
+//                             className="btn btn-sm btn-outline"
+//                             style={{ whiteSpace: 'nowrap' }} // Keeps "Add New" on one line
+//                         >
+//                             Add New
+//                         </button>
+//                     )}
+//                     {/* --- END OF CHANGE --- */}
 
-                </div>
+//                 </div>
 
-                {errors[field.name] && <small style={{ color: 'red', fontSize: '12px' }}>{errors[field.name]}</small>}
-            </div>
-        ))}
+//                 {errors[field.name] && <small style={{ color: 'red', fontSize: '12px' }}>{errors[field.name]}</small>}
+//             </div>
+//         ))}
         
-        <div className="modal-actions">
-            <button type="submit" className="btn btn-primary">Save</button>
+//         <div className="modal-actions">
+//             <button type="submit" className="btn btn-primary">Save</button>
+//         </div>
+//     </form>
+//     return (
+//   <form onSubmit={handleSubmit} className="generic-form">
+//     {errorMessage && (
+//       <div className="form-error-top">{errorMessage}</div>
+//     )}
+
+//     {fields.map((field, index) => {
+//       if (field.type === "multi_material") {
+//         console.log("Material options:", vendorOptions.material);
+
+//   return (
+    
+//     <MultiSelectWithAdd
+//       key={index}
+//       label={field.label}
+//       options={vendorOptions.material || []}
+
+//       value={values.material_ids || []}
+//       onChange={(selected) => setValues(prev => ({ ...prev, material_ids: selected }))}
+//       reloadOptions={fetchVendorOptions}
+//     />
+//   );
+// }
+
+  
+//   if (field.type === "custom") {
+//   return (
+//     <SelectWithAdd
+//       key={index}
+//       label={field.label}
+//       type={field.customType}
+//       options={(vendorOptions?.[field.customType] || []).map(v => ({ value: v, label: v }))}
+//       value={values[field.name] || ""}
+//       onChange={(e) => setValues(prev => ({ ...prev, [field.name]: e.target.value }))}
+//       reloadOptions={fetchVendorOptions}
+//     />
+//   );
+// }
+
+//       // 🧩 Regular select or input
+//       return (
+//         <div className="form-group" key={field.name}>
+//           <label className="form-label">{field.label}</label>
+
+//           {field.type === "select" ? (
+//             <select
+//               name={field.name}
+//               className="form-control"
+//               value={values[field.name] || ""}
+//               onChange={handleChange}
+//               required={field.required}
+              
+//             >
+//               <option value="">Select {field.label}</option>
+//               {field.options.map((opt) => (
+//                 <option key={opt.value} value={opt.value}>
+//                   {opt.label}
+//                 </option>
+//               ))}
+//             </select>
+//           ) : (
+//             <input
+//               type={field.type || "text"}
+//               name={field.name}
+//               className="form-control"
+//               value={values[field.name] || ""}
+//               onChange={handleChange}
+//               required={field.required}
+//               readOnly={field.readOnly || false}
+//               autoComplete={field.type === "password" ? "new-password" : "off"}
+//             />
+//           )}
+
+//           {errors[field.name] && (
+//             <small style={{ color: "red", fontSize: "12px" }}>
+//               {errors[field.name]}
+//             </small>
+//           )}
+//         </div>
+//       );
+//     })}
+
+//     <div className="modal-actions">
+//       <button type="submit" className="btn btn-primary">
+//         Save
+//       </button>
+//     </div>
+//   </form>
+// );
+
+// };
+return (
+  <form onSubmit={handleSubmit} className="generic-form">
+    {/* Top error message */}
+    {genericErrorMessage && (
+      <div className="form-error-top">{genericErrorMessage}</div>
+    )}
+
+    {fields.map((field, index) => {
+      // Multi-material field
+      if (field.type === "multi_material") {
+        return (
+          <MultiSelectWithAdd
+            key={index}
+            label={field.label}
+            options={vendorOptions.material || []}
+            value={values.material_ids || []}
+            onChange={(selected) =>
+              setValues((prev) => ({ ...prev, material_ids: selected }))
+            }
+            reloadOptions={fetchVendorOptions}
+          />
+        );
+      }
+
+      // Custom select with add
+      if (field.type === "custom") {
+        return (
+          <SelectWithAdd
+            key={index}
+            label={field.label}
+            type={field.customType}
+            options={(vendorOptions?.[field.customType] || []).map((v) => ({
+              value: v,
+              label: v,
+            }))}
+            value={values[field.name] || ""}
+            onChange={(e) =>
+              setValues((prev) => ({ ...prev, [field.name]: e.target.value }))
+            }
+            reloadOptions={fetchVendorOptions}
+          />
+        );
+      }
+
+      // Regular input or select with optional Add New
+      return (
+        <div className="form-group" key={field.name}>
+          <label className="form-label">
+            {field.label}
+            {field.required && <span style={{ color: "red" }}> *</span>}
+          </label>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ flex: 1 }}>
+              {field.type === "select" ? (
+                <select
+                  name={field.name}
+                  className="form-control"
+                  value={values[field.name] || ""}
+                  onChange={handleChange}
+                  required={field.required}
+                >
+                  <option value="">Select {field.label}</option>
+                  {field.options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={field.type || "text"}
+                  name={field.name}
+                  className="form-control"
+                  value={values[field.name] || ""}
+                  onChange={handleChange}
+                  required={field.required}
+                  readOnly={field.readOnly || false}
+                  autoComplete={field.type === "password" ? "new-password" : "off"}
+                />
+              )}
+            </div>
+
+            {/* Add New button if defined */}
+            {field.onAddNew && (
+              <button
+                type="button"
+                onClick={field.onAddNew}
+                className="btn btn-sm btn-outline"
+                style={{ whiteSpace: "nowrap" }}
+              >
+                Add New
+              </button>
+            )}
+          </div>
+
+          {errors[field.name] && (
+            <small style={{ color: "red", fontSize: "12px" }}>
+              {errors[field.name]}
+            </small>
+          )}
         </div>
-    </form>
+      );
+    })}
+
+    <div className="modal-actions">
+      <button type="submit" className="btn btn-primary">
+        Save
+      </button>
+    </div>
+  </form>
 );
-
 };
-
 // --- Job & Phases Components (Unchanged) ---
 const JobPhasesTable = ({ phases, onEdit, onDelete }) => (
     <table className="data-table">
@@ -323,6 +546,8 @@ const [projectEngineerId, setProjectEngineerId] = useState('');
     const fixedPhases = ["Admin", "S&SL", "Vacation"];
     const [locations, setLocations] = useState([]);
  const [engineers, setEngineers] = useState([]);
+
+
 
 useEffect(() => {
   fetch("http://localhost:8000/api/project-engineer/")
@@ -448,7 +673,6 @@ useEffect(() => {
       </option>
     ))}
 </select>
-
 </div>
 
                 
@@ -511,12 +735,204 @@ const SECTIONS = [
     "users","employees","equipment","job-phases",
     "materials","vendors","dumping_sites","crewMapping"
 ];
-const ITEMS_PER_PAGE = 1; // or desired default
+const ITEMS_PER_PAGE = 2; // or desired default
 
 
 const capitalizeFirstLetter = (str) => {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
+};
+// --- imports ---
+
+
+// ✅ Define this before AdminDashboard
+const SelectWithAdd = ({ label, options, type, onChange, value, reloadOptions }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newOption, setNewOption] = useState("");
+
+  const handleAddOption = async () => {
+    if (!newOption.trim()) return;
+    try {
+      await axios.post(`http://localhost:8000/api/vendor-options/${type}?value=${encodeURIComponent(newOption)}`);
+      alert(`${newOption} added to ${type}`);
+      setNewOption("");
+      setShowAdd(false);
+      reloadOptions(); // refresh options from DB
+    } catch (err) {
+      alert(err.response?.data?.detail || "Failed to add option");
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: "10px" }}>
+      <label>{label}</label>
+      <div style={{ display: "flex", gap: "8px" }}>
+        <select value={value} onChange={onChange} className="form-select">
+          <option value="">Select {label}</option>
+          {options.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => setShowAdd(!showAdd)}
+          className="btn btn-outline-primary btn-sm"
+        >
+          +
+        </button>
+      </div>
+
+      {showAdd && (
+        <div style={{ marginTop: "5px", display: "flex", gap: "5px" }}>
+          <input
+            type="text"
+            value={newOption}
+            onChange={(e) => setNewOption(e.target.value)}
+            placeholder={`Add new ${label}`}
+            className="form-control"
+          />
+          <button type="button" onClick={handleAddOption} className="btn btn-success btn-sm">
+            Add
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+const MultiSelectWithAdd = ({ label, options, onChange, value = [], reloadOptions }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newMaterial, setNewMaterial] = useState("");
+  const [newUnit, setNewUnit] = useState("");
+
+  const handleAddMaterial = async () => {
+    if (!newMaterial.trim() || !newUnit.trim()) return;
+    try {
+      await axios.post("http://localhost:8000/api/vendor-materials/", {
+        material: newMaterial,
+        unit: newUnit,
+      });
+      alert(`${newMaterial} (${newUnit}) added successfully`);
+      setNewMaterial("");
+      setNewUnit("");
+      setShowAdd(false);
+      reloadOptions();
+    } catch (err) {
+      alert(err.response?.data?.detail || "Failed to add material");
+    }
+  };
+
+  const handleCheckboxChange = (selectedValue) => {
+    const newSelected = value.includes(selectedValue)
+      ? value.filter(v => v !== selectedValue)
+      : [...value, selectedValue];
+    onChange(newSelected);
+  };
+
+  return (
+    <div style={{ marginBottom: "18px" }}>
+      <label>{label}</label>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+        <div
+          className="form-control"
+          style={{
+            flex: 1,
+            minHeight: "120px",
+            maxHeight: "160px",
+            overflowY: "auto",
+            padding: "8px 12px",
+            borderRadius: "6px",
+            backgroundColor: "white",
+          }}
+        >
+          {(options || []).map(opt => (
+            <div
+              key={opt.value}
+              className="form-check"
+              style={{ marginBottom: "5px" }}
+            >
+              <input
+                type="checkbox"
+                className="form-check-input"
+                id={`material-${opt.value}`}
+                checked={value.includes(opt.value)}
+                onChange={() => handleCheckboxChange(opt.value)}
+              />
+              <label
+                className="form-check-label"
+                htmlFor={`material-${opt.value}`}
+              >
+                {opt.label}
+              </label>
+            </div>
+          ))}
+        </div>
+      <button
+          type="button"
+          onClick={() => setShowAdd(!showAdd)}
+          className="btn btn-outline-primary btn-sm"
+          style={{
+            height: "42px",
+            width: "28px",
+            borderRadius: "6px",
+            
+            lineHeight: "1",
+            padding: "0",
+          }}
+          title="Add Material"
+        >
+          +
+        </button>
+      </div>
+
+      {showAdd && (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      marginTop: "12px", // space between material list and input row
+    }}
+  >
+    {/* Material input */}
+    <input
+      type="text"
+      value={newMaterial}
+      onChange={(e) => setNewMaterial(e.target.value)}
+      placeholder="Material"
+      className="form-control"
+      style={{ flex: 2 }}
+    />
+
+    {/* Unit input */}
+    <input
+      type="text"
+      value={newUnit}
+      onChange={(e) => setNewUnit(e.target.value)}
+      placeholder="Unit"
+      className="form-control"
+      style={{ flex: 1 }}
+    />
+
+    {/* Add button */}
+    <button
+      type="button"
+      onClick={() => {
+        if (!newMaterial.trim() && !newUnit.trim()) {
+          setShowAdd(false); // close if both empty
+          return;
+        }
+        handleAddMaterial();
+      }}
+      className="btn btn-success btn-sm"
+    >
+      Add
+    </button>
+  </div>
+)}
+
+
+    </div>
+  );
 };
 
 // --- Main Admin Dashboard Component ---
@@ -552,6 +968,46 @@ const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
 // ... existing states
 const [subModal, setSubModal] = useState({ shown: false, type: null, title: '' }); // <-- ADD THIS
 // ...
+const [form, setForm] = useState({});
+
+
+const [vendorOptions, setVendorOptions] = useState({
+  type: [],
+  category: [],
+  material: [],
+  unit: [],
+});
+
+const fetchVendorOptions = async () => {
+  try {
+    // Fetch type, category, and unit from vendor_options table
+    const types = ["type", "category", "unit"];
+    const res = await Promise.all(
+      types.map(t => axios.get(`http://localhost:8000/api/vendor-options/${t}`))
+    );
+
+    // Fetch materials from vendor_materials table instead
+    const materialsRes = await axios.get("http://localhost:8000/api/vendor-materials/");
+    const materialOptions = materialsRes.data.map(m => ({
+      value: m.id,
+      label: `${m.material} — ${m.unit}`,
+    }));
+
+    // ✅ Merge all data properly
+    setVendorOptions({
+      type: res[0].data,
+      category: res[1].data,
+      unit: res[2].data,
+      material: materialOptions,
+    });
+  } catch (err) {
+    console.error("Error fetching vendor options:", err);
+  }
+};
+
+useEffect(() => {
+  fetchVendorOptions();
+}, []);
 
 
 
@@ -739,129 +1195,289 @@ const handleSaveJob = async (jobData) => {
         showNotification(`Error saving job: ${errorMessage}`);
     }
 };
-
-
-
 const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) => {
-    const stateKey = typeToStateKey[type];
-    setFormError('');
-    setFieldErrors({});
+  const stateKey = typeToStateKey[type];
+  setFormError('');
+  setFieldErrors({});
 
-    // This is the raw data from your form
-    const formData = { ...itemData };
+  const formData = { ...itemData }; // Raw data from form
+  let payload;
 
-    // This will hold the final, clean data to be sent to the backend
-    let payload;
+  try {
+    // ----------------------------
+    // 1. TYPE-SPECIFIC PAYLOAD PREPARATION
+    // ----------------------------
+    if (type === "vendor") {
+      const baseUrl = "http://localhost:8000/api/vendors/";
 
-    // --- START: TYPE-SPECIFIC PAYLOAD PREPARATION ---
+      let response;
+      if (mode === "add") {
+        response = await axios.post(baseUrl, formData);
+        alert("Vendor added successfully");
+      } else {
+        response = await axios.put(`${baseUrl}${existingItem.id}/`, formData);
+        alert("Vendor updated successfully");
+      }
+
+      if (typeof fetchVendorOptions === "function") await fetchVendorOptions();
+      closeMainModal();
+      return; // Stop further execution
+    }
 
     if (type === 'equipment') {
-        // 1. For 'equipment', we manually construct the payload
-        //    to match the backend's snake_case schema.
+      // Validation
+      if (!formData.id || formData.id.trim() === '') {
+        setFieldErrors({ id: 'Equipment ID is required.' });
+        return;
+      }
+      if (!formData.departmentId) {
+        setFieldErrors({ departmentId: 'Department is required.' });
+        return;
+      }
+      if (!formData.categoryid) {
+        setFieldErrors({ categorynumber: 'Category Number is required.' });
+        return;
+      }
 
-        // Client-side validation before constructing the payload
-        if (!formData.id || formData.id.trim() === '') {
-            setFieldErrors({ id: 'Equipment ID is a required field.' });
-            return;
-        }
-        if (!formData.departmentId) {
-            setFieldErrors({ departmentId: 'Department is required.' });
-            return;
-        }
-        if (!formData.categoryid) {
-            setFieldErrors({ categorynumber: 'Category Number is required.' });
-            return;
-        }
-
-        // Build the payload with the exact field names and types the backend expects
-        payload = {
-            id: formData.id,
-            name: formData.name,
-            department_id: parseInt(formData.departmentId, 10),
-            category_id: parseInt(formData.categoryid, 10),
-            vin_number: formData.vinnumber || null,
-            status: (formData.status || 'Active').toLowerCase()
-        };
-
+      payload = {
+        id: formData.id,
+        name: formData.name,
+        department_id: parseInt(formData.departmentId, 10),
+        category_id: parseInt(formData.categoryid, 10),
+        vin_number: formData.vinnumber || null,
+        status: (formData.status || 'Active').toLowerCase()
+      };
     } else if (['user', 'dumpingsite'].includes(type)) {
-        // 2. For 'user' and 'dumpingsite', the primary task is converting their ID to a number.
-
-        if (formData.id) {
-            const numericId = parseInt(formData.id, 10);
-            if (isNaN(numericId)) {
-                setFieldErrors({ id: 'ID must be a valid number.' });
-                return;
-            }
-            formData.id = numericId; // Update the ID in the formData object
+      // Ensure ID is numeric
+      if (formData.id) {
+        const numericId = parseInt(formData.id, 10);
+        if (isNaN(numericId)) {
+          setFieldErrors({ id: 'ID must be a valid number.' });
+          return;
         }
-        payload = { ...formData }; // The rest of the fields are correct
-
+        formData.id = numericId;
+      }
+      payload = { ...formData };
     } else {
-        // 3. For 'employee' and all other types, the form data is already in the correct format.
-        payload = { ...formData };
+      payload = { ...formData }; // Default for other types
     }
 
-    // Normalize status to lowercase if it exists in the final payload
-    if (payload.status) {
-        payload.status = payload.status.toLowerCase();
-    }
+    // Normalize status
+    if (payload.status) payload.status = payload.status.toLowerCase();
 
-    // --- END: PAYLOAD PREPARATION ---
+    closeMainModal();
 
-
-    // --- Client-side duplicate checks ---
+    // ----------------------------
+    // 2. CLIENT-SIDE DUPLICATE CHECKS
+    // ----------------------------
     if (mode === 'add') {
-        const newErrors = {};
-        if (type === 'equipment' && data.equipment.some(equip => equip.id === payload.id)) {
-            newErrors.id = 'Equipment ID already exists.';
-        } else if (type === 'user' && data.users.some(user => user.id === payload.id)) {
-            newErrors.id = 'User ID already exists.';
-        } else if (type === 'employee' && data.employees.some(emp => emp.id === payload.id)) {
-            newErrors.id = 'Employee ID already exists.';
-        } // ... etc.
+      const newErrors = {};
+      if (type === 'equipment' && data.equipment?.some(e => e.id === payload.id)) {
+        newErrors.id = 'Equipment ID already exists.';
+      } else if (type === 'user' && data.users?.some(u => u.id === payload.id)) {
+        newErrors.id = 'User ID already exists.';
+      } else if (type === 'employee' && data.employees?.some(emp => emp.id === payload.id)) {
+        newErrors.id = 'Employee ID already exists.';
+      }
 
-        if (Object.keys(newErrors).length > 0) {
-            setFieldErrors(newErrors);
-            return;
-        }
+      if (Object.keys(newErrors).length > 0) {
+        setFieldErrors(newErrors);
+        return;
+      }
     }
 
-
-    try {
-        let response;
-        if (mode === "edit" && existingItem) {
-            const itemId = existingItem.id;
-            response = await axios.put(`${API_URL}/${stateKey}/${encodeURIComponent(itemId)}`, payload);
-            onUpdate(stateKey, (data[stateKey] || []).map(it => it.id === itemId ? response.data : it));
-        } else {
-            response = await axios.post(`${API_URL}/${stateKey}/`, payload);
-            onUpdate(stateKey, [response.data, ...(data[stateKey] || [])]);
-        }
-        closeMainModal();
-    } catch (error) {
-        // Your existing, excellent error handling logic remains here
-        const errorData = error.response?.data?.detail;
-        if (error.response?.status === 422 && errorData) {
-            const newErrors = {};
-            if (Array.isArray(errorData)) {
-                errorData.forEach(err => {
-                    if (err.loc && err.loc.length > 1) {
-                        const backendField = err.loc[1];
-                        const frontendField = {
-                            'department_id': 'departmentId',
-                            'category_id': 'categoryid'
-                        }[backendField] || backendField;
-                        newErrors[frontendField] = err.msg;
-                    }
-                });
-            }
-            setFieldErrors(newErrors);
-        } else {
-            setFormError('An unexpected error occurred.');
-        }
-        console.error(`Error processing ${type}:`, error);
+    // ----------------------------
+    // 3. SEND DATA TO BACKEND
+    // ----------------------------
+    let response;
+    if (mode === "edit" && existingItem) {
+      const itemId = existingItem.id;
+      response = await axios.put(`${API_URL}/${stateKey}/${encodeURIComponent(itemId)}`, payload);
+      onUpdate(stateKey, (data[stateKey] || []).map(it => it.id === itemId ? response.data : it));
+    } else {
+      response = await axios.post(`${API_URL}/${stateKey}/`, payload);
+      onUpdate(stateKey, [response.data, ...(data[stateKey] || [])]);
     }
+
+    closeMainModal();
+
+  } catch (error) {
+    // ----------------------------
+    // 4. ERROR HANDLING
+    // ----------------------------
+    const errorData = error.response?.data?.detail;
+    if (error.response?.status === 422 && errorData) {
+      const newErrors = {};
+      if (Array.isArray(errorData)) {
+        errorData.forEach(err => {
+          if (err.loc && err.loc.length > 1) {
+            const backendField = err.loc[1];
+            const frontendField = {
+              'department_id': 'departmentId',
+              'category_id': 'categoryid'
+            }[backendField] || backendField;
+            newErrors[frontendField] = err.msg;
+          }
+        });
+      }
+      setFieldErrors(newErrors);
+    } else {
+      setFormError('An unexpected error occurred.');
+    }
+    console.error(`Error processing ${type}:`, error);
+  }
 };
+
+
+
+// const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) => {
+//     const stateKey = typeToStateKey[type];
+//     setFormError('');
+//     setFieldErrors({});
+
+//     // This is the raw data from your form
+//     const formData = { ...itemData };
+
+//     // This will hold the final, clean data to be sent to the backend
+//     let payload;
+
+//     // --- START: TYPE-SPECIFIC PAYLOAD PREPARATION ---
+// try {
+//     let response;
+//     const cleanData = { ...itemData };
+//      if (type === "vendor") {
+//   const baseUrl = "http://localhost:8000/api/vendors/";
+
+//   if (mode === "add") {
+//     response = await axios.post(baseUrl, cleanData);
+//     alert("Vendor added successfully");
+//   } else {
+//     response = await axios.put(`${baseUrl}${existingItem.id}/`, cleanData);
+//     alert("Vendor updated successfully");
+//   }
+
+//   // Optional: refresh vendor list
+//   if (typeof fetchVendorOptions  === "function") await fetchVendorOptions ();
+  
+//   closeMainModal();
+//   return; // stop further execution here
+// }
+
+//     if (type === 'equipment') {
+//         // 1. For 'equipment', we manually construct the payload
+//         //    to match the backend's snake_case schema.
+
+//         // Client-side validation before constructing the payload
+//         if (!formData.id || formData.id.trim() === '') {
+//             setFieldErrors({ id: 'Equipment ID is a required field.' });
+//             return;
+//         }
+//         if (!formData.departmentId) {
+//             setFieldErrors({ departmentId: 'Department is required.' });
+//             return;
+//         }
+//         if (!formData.categoryid) {
+//             setFieldErrors({ categorynumber: 'Category Number is required.' });
+//             return;
+//         }
+
+//         // Build the payload with the exact field names and types the backend expects
+//         payload = {
+//             id: formData.id,
+//             name: formData.name,
+//             department_id: parseInt(formData.departmentId, 10),
+//             category_id: parseInt(formData.categoryid, 10),
+//             vin_number: formData.vinnumber || null,
+//             status: (formData.status || 'Active').toLowerCase()
+//         };
+
+//     } else if (['user', 'dumpingsite'].includes(type)) {
+//         // 2. For 'user' and 'dumpingsite', the primary task is converting their ID to a number.
+
+//         if (formData.id) {
+//             const numericId = parseInt(formData.id, 10);
+//             if (isNaN(numericId)) {
+//                 setFieldErrors({ id: 'ID must be a valid number.' });
+//                 return;
+//             }
+//             formData.id = numericId; // Update the ID in the formData object
+//         }
+//         payload = { ...formData }; // The rest of the fields are correct
+
+//     } else {
+//         // 3. For 'employee' and all other types, the form data is already in the correct format.
+//         payload = { ...formData };
+//     }
+//     closeMainModal();
+// } 
+// catch (error) {
+//     const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : "An unexpected error occurred.";
+//     setFormError(`Error: ${errorMessage}`);
+//   }
+
+// };
+
+//     // Normalize status to lowercase if it exists in the final payload
+//     if (payload.status) {
+//         payload.status = payload.status.toLowerCase();
+//     }
+
+//     // --- END: PAYLOAD PREPARATION ---
+
+
+//     // --- Client-side duplicate checks ---
+//     if (mode === 'add') {
+//         const newErrors = {};
+//         if (type === 'equipment' && data.equipment.some(equip => equip.id === payload.id)) {
+//             newErrors.id = 'Equipment ID already exists.';
+//         } else if (type === 'user' && data.users.some(user => user.id === payload.id)) {
+//             newErrors.id = 'User ID already exists.';
+//         } else if (type === 'employee' && data.employees.some(emp => emp.id === payload.id)) {
+//             newErrors.id = 'Employee ID already exists.';
+//         } // ... etc.
+
+//         if (Object.keys(newErrors).length > 0) {
+//             setFieldErrors(newErrors);
+//             return;
+//         }
+//     }
+
+
+//     try {
+//         let response;
+//         if (mode === "edit" && existingItem) {
+//             const itemId = existingItem.id;
+//             response = await axios.put(`${API_URL}/${stateKey}/${encodeURIComponent(itemId)}`, payload);
+//             onUpdate(stateKey, (data[stateKey] || []).map(it => it.id === itemId ? response.data : it));
+//         } else {
+//             response = await axios.post(`${API_URL}/${stateKey}/`, payload);
+//             onUpdate(stateKey, [response.data, ...(data[stateKey] || [])]);
+//         }
+//         closeMainModal();
+//     } catch (error) {
+//         // Your existing, excellent error handling logic remains here
+//         const errorData = error.response?.data?.detail;
+//         if (error.response?.status === 422 && errorData) {
+//             const newErrors = {};
+//             if (Array.isArray(errorData)) {
+//                 errorData.forEach(err => {
+//                     if (err.loc && err.loc.length > 1) {
+//                         const backendField = err.loc[1];
+//                         const frontendField = {
+//                             'department_id': 'departmentId',
+//                             'category_id': 'categoryid'
+//                         }[backendField] || backendField;
+//                         newErrors[frontendField] = err.msg;
+//                     }
+//                 });
+//             }
+//             setFieldErrors(newErrors);
+//         } else {
+//             setFormError('An unexpected error occurred.');
+//         }
+//         console.error(`Error processing ${type}:`, error);
+//     }
+// };
 
 // const handleToggleStatus = async (type, item, newStatus) => {
 //   const stateKey = typeToStateKey[type];
@@ -1023,47 +1639,52 @@ setData(prev => {
         { name: 'number', label: 'Category Number', required: true },
         { name: 'name', label: 'Category Name', required: true }
       ];
+               
+case "vendor":
+  return [
+    { name: "id", label: "Vendor ID", type: "number", required: true },
+    { name: "name", label: "Vendor Name", required: true },
+    {
+      name: "vendor_type",
+      label: "Vendor Type",
+      type: "custom",
+      customType: "type",
+    },
+    {
+      name: "vendor_category",
+      label: "Vendor Category",
+      type: "custom",
+      customType: "category",
+    },
 
-            case "vendor": return [ { name: "name", label: "Work Performed Name", required: true }, { name: "unit", label: "Unit", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
-            case "material": return [ { name: "name", label: "Material/Trucking Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
+{
+  name: "materials",
+  label: "Materials (with Units)",
+  type: "multi_material",
+},
+    {
+      name: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "Active", label: "Active" },
+        { value: "Inactive", label: "Inactive" },
+      ],
+      required: true,
+      defaultValue: "Active",
+    },
+  ];
+
+    
+    case "material": return [ { name: "name", label: "Material/Trucking Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
             case "dumping_site": return [ { name: "id", label: "Site ID", required: true }, { name: "name", label: "Site Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
             default: return [];
         }
     };
 
-// const getEquipmentFormFields = () => {
-//   return getFormFields("equipment").map((field) => {
-//     if (field.name === "department") {
-//       return {
-//         ...field,
-//         options: [
-//           { value: "", label: "Select Department" },  // Default placeholder
-//           ...departments.map((d) => ({ value: d.id, label: d.name })),
-//         ],
-//       };
-//     }
-//     if (field.name === "category") {
-//       return {
-//         ...field,
-//         options: [
-//           { value: "", label: "Select Category" },  // Default placeholder
-//           ...categories.map((c) => ({ value: c.id, label: c.name })),
-//         ],
-//       };
-//     }
-//     if (field.name === "category_number") {
-//       return {
-//         ...field,
-//         options: [
-//           { value: "", label: "Select Category Number" },  // Default placeholder
-//           ...categoryNumbers,
-//         ],
-//       };
-//     }
-//     return field;
-//   });
-// };
-const getEquipmentFormFields = () => {
+
+
+const getEquipmentFormFields = (form, setForm) => {
   return getFormFields("equipment").map((field) => {
     if (field.name === "department_id") {
       return {
@@ -1077,25 +1698,6 @@ const getEquipmentFormFields = () => {
       };
     }
 
-    if (field.name === "category") {
-      return {
-        ...field,
-        type: "text",
-        options: [
-          { value: "", label: "Select Category" },
-          ...categories.map((c) => ({ value: c.id, label: c.name })),
-        ],
-        value: selectedCategoryId,
-        onChange: (e) => {
-          const selectedId = e.target.value;
-          setSelectedCategoryId(selectedId);
-
-          const selectedCat = categories.find((c) => c.id === parseInt(selectedId));
-          setSelectedCategoryNumber(selectedCat ? selectedCat.number : "");
-        },
-      };
-    }
-
     if (field.name === "category_number") {
   return {
     ...field,
@@ -1106,8 +1708,41 @@ const getEquipmentFormFields = () => {
     ],
   };
 }
-
-
+ // 🧩 Add SelectWithAdd logic — for example, for "vendor_type"
+    if (field.name === "vendor_type") {
+      return {
+        ...field,
+        customRender: () => (
+          <SelectWithAdd
+            label="Vendor Type"
+            type="type"
+            options={vendorOptions.type.map(v => ({ value: v, label: v }))}
+            value={form.vendor_type}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, vendor_type: e.target.value }))
+            }
+            reloadOptions={fetchVendorOptions}
+          />
+        ),
+      };
+    }
+ if (field.name === "vendor_category") {
+      return {
+        ...field,
+        customRender: () => (
+          <SelectWithAdd
+            label="Vendor Category"
+            type="category"
+            options={vendorOptions.category.map(v => ({ value: v, label: v }))}
+            value={form.vendor_category}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, vendor_category: e.target.value }))
+            }
+            reloadOptions={fetchVendorOptions}
+          />
+        ),
+      };
+    }
 
     return field;
   });
@@ -1156,7 +1791,9 @@ const prepareJobForEditModal = (job) => {
     const renderSection = () => {
 // In AdminDashboard.js, replace the entire function
 
-const makeTableWithPagination = (type, title, headers, rowRender, itemLabel) => {
+const makeTableWithPagination = (type, title, headers, rowRender, extra = null) => {
+    const isExtraObject = extra && typeof extra === "object" && !Array.isArray(extra);
+    const itemLabel = isExtraObject ? null:extra;
     const label = itemLabel || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     const key = typeToStateKey[type];
     const dataArr = data[key] || [];
@@ -1190,17 +1827,35 @@ const makeTableWithPagination = (type, title, headers, rowRender, itemLabel) => 
                 // --- FIX #3: Pass the correctly filtered and paginated data ---
                 data={pagedData}
                 renderRow={(item) => <>{rowRender(item)}</>}
-                onAdd={() => setModal({ shown: true, type, title: `Add ${label}`, mode: 'add', item: null })}
-                onEdit={(item) => setModal({ shown: true, type, title: `Edit ${label}`, mode: 'edit', item })}
-                onDelete={(id) => handleDeleteItem(type, id)}
-                handleToggleStatus={handleToggleStatus}
-                activeSection={type}
+                // onAdd={() => setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })}
+                // onEdit={item => setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })}
+                // onDelete={id => handleDeleteItem(type, id)}
+                // handleToggleStatus={handleToggleStatus}
+                // activeSection={type}
+                onAdd={() =>
+                    isExtraObject && extra.onAdd
+                        ? extra.onAdd()
+                        : setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })
+                }
+                onEdit={(item) =>
+                    isExtraObject && extra.onEdit
+                        ? extra.onEdit(item)
+                        : setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })
+                }
+                onDelete={(id) =>
+                    isExtraObject && extra.onDelete
+                        ? extra.onDelete(id)
+                        : handleDeleteItem(type, id)
+                }
+                 extraActions={isExtraObject ? extra.extraActions : undefined}
+                handleToggleStatus={isExtraObject && extra.handleToggleStatus ? extra.handleToggleStatus : handleToggleStatus}
+                activeSection={isExtraObject && extra.activeSection ? extra.activeSection : type}
             />
+            
             <PaginationControls
                 currentPage={currentPage}
-                // --- FIX #4: Pass the correct total pages count ---
                 totalPages={totalPages}
-                onPaginate={(pageNum) => handlePaginate(key, pageNum, totalPages)}
+                onPaginate={pageNum => handlePaginate(key, pageNum, totalPages)}
             />
         </div>
     );
@@ -1226,6 +1881,7 @@ const makeTableWithPagination = (type, title, headers, rowRender, itemLabel) => 
 
                         </>
                     )
+                    
                 );
             case "employees": 
                 return makeTableWithPagination("employee", "Employee Management", ["ID", "Name", "Class", "Status"], e => {
@@ -1287,9 +1943,43 @@ case "equipment":
 
 
 
-            case "vendors": 
-                return makeTableWithPagination("vendor", "Work Performed", ["Name", "Unit", "Status"], v => <><td key={v.name}>{v.name}</td><td key={v.unit}>{v.unit}</td><td key={v.status}>{capitalizeFirstLetter(v.status)}</td>
-</>, "Work Performed");
+           case "vendors":
+  return makeTableWithPagination(
+    "vendor",
+    "Vendors",
+    ["ID", "Name", "Type", "Category", "Material", "Unit", "Status"],
+    (v) => (
+      <>
+        <td key={v.id}>{v.id}</td>
+        <td key={v.name}>{v.name}</td>
+        <td key={v.vendor_type}>{v.vendor_type || "-"}</td>
+        <td key={v.vendor_category}>{v.vendor_category || "-"}</td>
+        <td>
+          {v.materials?.length
+            ? v.materials.map((m) => m.material).join(", ")
+            : "-"}
+        </td>
+        <td>
+          {v.materials?.length
+            ? v.materials.map((m) => m.unit).join(", ")
+            : "-"}
+        </td>
+        <td key={v.status}>{capitalizeFirstLetter(v.status)}</td>
+      </>
+    ),
+    "Vendors"
+  );
+
+
+
+
+
+
+
+
+
+
+
             case "materials": 
                 return makeTableWithPagination("material", "Materials and Trucking", ["Name", "Status"], m => <><td key={m.name}>{m.name}</td><td key={m.status}>{capitalizeFirstLetter(m.status)}</td>
 </>, "Material and Trucking");
@@ -1341,6 +2031,26 @@ employees: data.employees || [], equipment: data.equipment || [],
             default: return <div>Section not implemented.</div>;
         }
     };
+const [vendorData, setVendorData] = useState({
+  id: "",
+  name: "",
+  vendor_type: "",
+  vendor_category: "",
+  status: "ACTIVE",
+  materials: [{ material: "", unit: "" }],
+});
+const handleMaterialChange = (index, field, value) => {
+  const newMaterials = [...vendorData.materials];
+  newMaterials[index][field] = value;
+  setVendorData({ ...vendorData, materials: newMaterials });
+};
+
+const addMaterialRow = () => {
+  setVendorData({
+    ...vendorData,
+    materials: [...vendorData.materials, { material: "", unit: "" }],
+  });
+};
 
     return (
         <div className="admin-layout">
@@ -1349,13 +2059,30 @@ employees: data.employees || [], equipment: data.equipment || [],
 
             {modal.shown && (
   <Modal title={modal.title} onClose={closeMainModal}>
-    <GenericForm
-      fields={getFormFields(modal.type)}
-      categories={categories} // Pass categories here
-      defaultValues={modal.item}
-      onSubmit={(formData) => handleAddOrUpdateItem(modal.type, formData, modal.mode, modal.item)}
-errorMessage={fieldErrors} // Pass the new state as a prop
-  genericErrorMessage={formError}   />
+  <GenericForm
+    fields={
+      
+      modal.type === "equipment"
+        ? getEquipmentFormFields()  // ✅ Use this for equipment
+        : getFormFields(modal.type) // ✅ Use normal form for others
+    }
+    vendorOptions={vendorOptions}
+    fetchVendorOptions={fetchVendorOptions}
+    categories={categories} 
+    defaultValues={modal.item || {}}
+    onSubmit={(formData) => {
+  const finalData = {
+    ...formData,
+    materials: vendorData.materials,  // ✅ send as list of objects
+  };
+  handleAddOrUpdateItem(modal.type, finalData, modal.mode, modal.item);
+}}
+
+    errorMessage={formError}
+  />
+  
+ 
+
 </Modal>
 
 )}

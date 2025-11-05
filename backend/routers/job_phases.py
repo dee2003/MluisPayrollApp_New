@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/job-phases", tags=["Job Phases"])
 
 # ✅ Create Job Phase
 @router.post("/", response_model=schemas.JobPhase)
-@audit(action="created", entity="JobPhase")
+@audit(action="CREATED", entity="JobPhase")
 def create_job_phase(job_phase: schemas.JobPhaseCreate, db: Session = Depends(database.get_db)):
     existing = db.query(models.JobPhase).filter(models.JobPhase.job_code == job_phase.job_code).first()
     if existing:

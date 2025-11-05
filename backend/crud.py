@@ -56,7 +56,12 @@ def create_crud_router(
         if model.__name__ == "User" and "password" in item_data:
             item_data["password"] = utils_comman.hash_password(item_data["password"])
         
-        db_item = model(**item_data)
+        # ✅ Filter out non-column keys before model creation
+        allowed_keys = {c.name for c in model.__table__.columns}
+        clean_data = {k: v for k, v in item_data.items() if k in allowed_keys}
+
+        db_item = model(**clean_data)
+
         db.add(db_item)
         db.commit()
         db.refresh(db_item)
@@ -259,3 +264,39 @@ def create_equipment(db: Session, equipment: schemas.EquipmentCreate):
     db.commit()
     db.refresh(db_equipment)
     return db_equipment
+
+
+
+
+# crud.py
+
+from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from . import models, schemas
+
+# def create_vendor(db: Session, vendor_data: schemas.VendorCreate):
+#     # Convert to dict
+#     vendor_dict = vendor_data.dict()
+    
+#     # Pop out the list of IDs (not a real DB column)
+#     material_ids = vendor_dict.pop("material_ids", [])
+
+#     # Create Vendor without that field
+#     db_vendor = models.Vendor(**vendor_dict)
+
+#     # Attach materials if provided
+#     if material_ids:
+#         materials = db.query(models.VendorMaterial).filter(
+#             models.VendorMaterial.id.in_(material_ids)
+#         ).all()
+
+#         if not materials:
+#             raise HTTPException(status_code=400, detail="No valid material IDs found")
+
+#         db_vendor.materials.extend(materials)
+
+#     db.add(db_vendor)
+#     db.commit()
+#     db.refresh(db_vendor)
+#     return db_vendor
+

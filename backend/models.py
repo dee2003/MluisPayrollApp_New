@@ -382,30 +382,6 @@ class SoftDeleteMixin:
 # 4. CORE DATA MODELS
 # ============================================================================== #
 
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, unique=True, nullable=False)  # manually assigned
-    username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    first_name = Column(String, nullable=False)
-    middle_name = Column(String, nullable=True)
-    last_name = Column(String, nullable=False)
-    password = Column(String, nullable=False)  # Hashed password
-    role = Column(SQLAlchemyEnum(UserRole), nullable=False)
-    status = Column(SQLAlchemyEnum(ResourceStatus), nullable=False, default=ResourceStatus.ACTIVE)
-
-    # Relationships
-    tickets = relationship("Ticket", back_populates="foreman", cascade="all, delete-orphan")
-    timesheets = relationship(
-        "Timesheet", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
-    )
-    crew_mappings = relationship(
-        "CrewMapping", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
-    )
-    assigned_jobs = relationship("ForemanJob", back_populates="foreman", cascade="all, delete-orphan")
-    foreman_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.foreman_id]")
-    supervisor_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.supervisor_id]")
-    engineer_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.engineer_id]")
 
 class Employee(Base):
     __tablename__ = "employees"
@@ -459,12 +435,61 @@ class Material(Base):
     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
 
 
+# class Vendor(Base):
+#     __tablename__ = "vendors"
+#     id = Column(Integer, Identity(start=1, increment=1), primary_key=True)
+#     name = Column(String, nullable=False, unique=True)
+#     unit = Column(String, nullable=True)
+#     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
+
+vendor_material_link = Table(
+    "vendor_material_link",
+    Base.metadata,
+    Column("vendor_id", Integer, ForeignKey("vendors.id", ondelete="CASCADE")),
+    Column("material_id", Integer, ForeignKey("vendor_materials.id", ondelete="CASCADE")),
+)
+
 class Vendor(Base):
     __tablename__ = "vendors"
-    id = Column(Integer, Identity(start=1, increment=1), primary_key=True)
+
+    id = Column(Integer, primary_key=True, index=True, nullable=False)
     name = Column(String, nullable=False, unique=True)
-    unit = Column(String, nullable=True)
+    vendor_type = Column(String, nullable=True)
+    vendor_category = Column(String, nullable=True)
     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
+
+    materials = relationship(
+        "VendorMaterial",
+        secondary="vendor_material_link",
+        back_populates="vendors",
+        cascade="all, delete",
+        passive_deletes=True
+    )
+
+
+
+class VendorMaterial(Base):
+    __tablename__ = "vendor_materials"
+    id = Column(Integer, primary_key=True, index=True, autoincrement= True)
+    # vendor_id = Column(Integer, ForeignKey("vendors.id", ondelete="CASCADE"))
+    material = Column(String, nullable=False)
+    unit = Column(String, nullable=False)
+
+    vendors = relationship(
+        "Vendor",
+        secondary="vendor_material_link",
+        back_populates="materials"
+    )
+
+print("🔍 Secondary table used for vendor-materials link:",
+      Vendor.materials.property.secondary)
+
+class VendorOption(Base):
+    __tablename__ = "vendor_options"
+
+    id = Column(Integer, primary_key=True, index=True)
+    option_type = Column(String, nullable=False)   # e.g., "type", "category", "material", "unit"
+    value = Column(String, nullable=False)         # e.g., "Concrete", "Hauler", etc.
 
 
 class DumpingSite(Base):
@@ -481,7 +506,7 @@ class JobPhase(Base):
     contract_no = Column(String)
     job_description = Column(String)
     project_engineer = Column(String)
-    # jurisdiction = Column(String)
+    jurisdiction = Column(String)
     location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"))
     location = relationship("Location", back_populates="job_phases")
     status = Column(String, default="Active")
@@ -752,3 +777,54 @@ class SupervisorSubmission(Base):
     date = Column(Date, nullable=False)
     status = Column(String, default="SubmittedToEngineer")
     submitted_at = Column(DateTime, default=datetime.utcnow)
+
+
+# class User(Base):
+#     __tablename__ = "users"
+#     id = Column(Integer, primary_key=True, unique=True, nullable=False)
+#     username = Column(String, unique=True, index=True, nullable=False)
+#     email = Column(String, unique=True, index=True, nullable=False)
+#     first_name = Column(String, nullable=False)
+#     middle_name = Column(String, nullable=True)
+#     last_name = Column(String, nullable=False)
+#     password = Column(String, nullable=False)  # Hashed password
+#     role = Column(SQLAlchemyEnum(UserRole), nullable=False)
+
+#     # Relationships
+#     tickets = relationship("Ticket", back_populates="foreman", cascade="all, delete-orphan")
+#     timesheets = relationship(
+#         "Timesheet", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
+#     )
+#     crew_mappings = relationship(
+#         "CrewMapping", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
+#     )
+#     assigned_jobs = relationship("ForemanJob", back_populates="foreman", cascade="all, delete-orphan")
+#     foreman_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.foreman_id]")
+#     supervisor_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.supervisor_id]")
+#     engineer_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.engineer_id]")
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, unique=True, nullable=False)  # manually assigned
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    first_name = Column(String, nullable=False)
+    middle_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=False)
+    password = Column(String, nullable=False)  # Hashed password
+    role = Column(SQLAlchemyEnum(UserRole), nullable=False)
+    status = Column(SQLAlchemyEnum(ResourceStatus), nullable=False, default=ResourceStatus.ACTIVE)
+
+    # Relationships
+    tickets = relationship("Ticket", back_populates="foreman")
+    timesheets = relationship(
+        "Timesheet", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
+    )
+    crew_mappings = relationship(
+        "CrewMapping", back_populates="foreman", cascade="all, delete-orphan", passive_deletes=True
+    )
+    assigned_jobs = relationship("ForemanJob", back_populates="foreman", cascade="all, delete-orphan")
+    foreman_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.foreman_id]")
+    supervisor_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.supervisor_id]")
+    engineer_workflows = relationship("TimesheetWorkflow", foreign_keys="[TimesheetWorkflow.engineer_id]")

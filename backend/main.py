@@ -1,8 +1,3 @@
-
-
-
-
-
 # backend/main.py
 from fastapi import FastAPI, Depends, APIRouter, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,10 +12,11 @@ from sqlalchemy.orm import selectinload
 
 from . import models, schemas, database, crud
 from .crud import create_crud_router
-from .routers import timesheet, tickets, review, equipment, submissions, project_engineer,job_phases
+from .routers import timesheet, tickets, review, equipment, submissions, project_engineer,job_phases,vendor_options,vendor_router, vendor_materials
 from .ocr import ocr_main
 from sqlalchemy import and_
 from .routers.dropdowns import router as dropdowns_router
+
 # -------------------------------
 # Database: Create all tables
 # -------------------------------
@@ -366,7 +362,7 @@ crud_models = [
     # {"model": models.User, "schemas": (schemas.UserCreate, schemas.User)},
     {"model": models.Employee, "schemas": (schemas.EmployeeCreate, schemas.Employee)},
     {"model": models.Equipment, "schemas": (schemas.EquipmentCreate, schemas.Equipment)},
-    {"model": models.Vendor, "schemas": (schemas.VendorCreate, schemas.Vendor)},
+    # {"model": models.Vendor, "schemas": (schemas.VendorCreate, schemas.Vendor)},
     {"model": models.Material, "schemas": (schemas.MaterialCreate, schemas.Material)},
     {"model": models.DumpingSite, "schemas": (schemas.DumpingSiteCreate, schemas.DumpingSite)},
 ]
@@ -393,6 +389,9 @@ app.include_router(ocr_main.router)
 app.include_router(dropdowns_router)
 # ... other routers
 app.include_router(job_phases.router)  # ✅ make sure this is here
+app.include_router(vendor_options.router)
+app.include_router(vendor_router.router)
+app.include_router(vendor_materials.router)
 # -------------------------------
 # Auth Router
 # -------------------------------
