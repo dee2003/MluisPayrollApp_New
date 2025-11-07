@@ -1,27 +1,4 @@
-# from fastapi import APIRouter, Depends
-# from sqlalchemy.orm import Session
-# from typing import List, Optional
-# from pydantic import BaseModel, ConfigDict
-# from ..database import get_db
-# from .. import models
-# router = APIRouter(prefix="/api", tags=["Vendor Options"])
 
-
-# @router.get("/vendor-options/{option_type}", response_model=List[str])
-# def get_vendor_options(option_type: str, db: Session = Depends(get_db)):
-#     options = (
-#         db.query(models.VendorOption)
-#         .filter(models.VendorOption.option_type == option_type)
-#         .all()
-#     )
-#     return [opt.value for opt in options]
-
-
-# @router.post("/vendor-options/{option_type}")
-# def add_vendor_option(option_type: str, value: str, db: Session = Depends(get_db)):
-#     db.add(models.VendorOption(option_type=option_type, value=value))
-#     db.commit()
-#     return {"message": f"{value} added to {option_type}"}
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from typing import List

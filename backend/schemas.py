@@ -146,54 +146,43 @@ class CategoryCreate(BaseModel):
 # ===============================
 #         MATERIALS
 # ===============================
-class MaterialBase(BaseModel):
+class MaterialTruckingBase(BaseModel):
+    id: int
     name: str
-    status: Optional[str] = "Active"
+    material_type: Optional[str] = None
+    material_category: Optional[str] = None
+    status: Optional[str]
+    material_ids: Optional[List[int]] = []
 
-class MaterialCreate(MaterialBase): 
+class MaterialTruckingCreate(MaterialTruckingBase):
     pass
 
-class Material(MaterialBase):
+class MaterialTruckingUpdate(MaterialTruckingBase):
+    pass
+
+class MaterialInfo(BaseModel):
     id: int
-    model_config = model_config
+    material: str
+    unit: Optional[str]
+
+    class Config:
+        orm_mode = True
+class MaterialTruckingRead(BaseModel):
+    id: int
+    name: str
+    material_type: Optional[str]
+    material_category: Optional[str]
+    status: Optional[str]
+    materials: List[MaterialInfo] = []  # each material has id + name
+
+    class Config:
+        orm_mode = True
 
 # ===============================
 #         VENDORS
 # ===============================
 
-# from pydantic import BaseModel
-# from typing import List, Optional
 
-# # ---------- VendorMaterial Schemas ----------
-# class VendorMaterialBase(BaseModel):
-#     material: str
-#     unit: Optional[str] = None
-
-# class VendorMaterialCreate(VendorMaterialBase):
-#     pass
-
-# class VendorMaterialRead(VendorMaterialBase):
-#     id: int
-#     class Config:
-#         orm_mode = True
-
-# # ---------- Vendor Schemas ----------
-# class VendorBase(BaseModel):
-#     name: str
-#     vendor_type: Optional[str]
-#     vendor_category: Optional[str]
-#     status: Optional[str] = "active"
-
-# class VendorCreate(VendorBase):
-#     material_ids: List[int] = []
-
-# class VendorRead(VendorBase):
-#     id: int
-#     materials: List[VendorMaterialRead] = []
-#     class Config:
-#         orm_mode = True
-# schemas.py
-# schemas.py
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -241,8 +230,49 @@ class VendorRead(BaseModel):
         orm_mode = True
 
 
+class DumpingMaterialInfo(BaseModel):
+    id: int
+    material: str
+    unit: Optional[str]
+
+    class Config:
+        orm_mode = True
+class DumpingSiteBase(BaseModel):
+    id: str
+    name: str
+    dumping_type: Optional[str]
+    dumping_category: Optional[str]
+    status: Optional[str] = None
+    material_ids: Optional[List[int]] = []
+
+class DumpingSiteCreate(DumpingSiteBase):
+    id: str
+    name: str
+    dumping_type: Optional[str]
+    dumping_category: Optional[str]
+    status: Optional[str] = None
+    material_ids: Optional[List[int]] = []
+
+class DumpingSiteRead(BaseModel):
+    id: str
+    name: str
+    dumping_type: Optional[str]
+    dumping_category: Optional[str]
+    status: Optional[str]
+    materials: List[DumpingMaterialInfo] = []
+
+    class Config:
+        orm_mode = True
+
+class DumpingSiteOptionBase(BaseModel):
+    option_type: str
+    value: str
 
 
+class DumpingSiteOptionRead(DumpingSiteOptionBase):
+    id: int
+    class Config:
+        orm_mode = True
 # ===============================
 #         JOB PHASES
 # ===============================
@@ -315,21 +345,21 @@ class LocationOut(LocationBase):
         orm_mode = True
 
 # ... (JobPhase response schema)
-class DumpingSiteBase(BaseModel):
-    id: str
-    name: str
-    status: str = "Active"
+# class DumpingSiteBase(BaseModel):
+#     id: str
+#     name: str
+#     status: str = "Active"
 
-class DumpingSiteCreate(DumpingSiteBase):
-    pass
+# class DumpingSiteCreate(DumpingSiteBase):
+#     pass
 
-class DumpingSiteUpdate(BaseModel):
-    name: Optional[str] = None
-    status: Optional[str] = None
+# class DumpingSiteUpdate(BaseModel):
+#     name: Optional[str] = None
+#     status: Optional[str] = None
 
-class DumpingSite(DumpingSiteBase):
-    class Config:
-        orm_mode = True
+# class DumpingSite(DumpingSiteBase):
+#     class Config:
+#         orm_mode = True
 # ===============================
 #         CREW MAPPING
 # ===============================
@@ -406,9 +436,9 @@ class CrewMappingResponse(BaseModel):
     # These fields match the SQLAlchemy relationship names
     employees: List[Employee] = []
     equipment: List[Equipment] = []
-    materials: List[Material] = []
-    vendors: List[Vendor] = []
-    dumping_sites: List[DumpingSite] = []
+    # materials: List[Material] = []
+    # vendors: List[Vendor] = []
+    # dumping_sites: List[DumpingSite] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -503,8 +533,8 @@ class AppData(BaseModel):
     employees: List[Employee]
     equipment: List[Equipment]
     job_phases: List[JobPhase]
-    materials: List[Material]
-    vendors: List[Vendor]
+    # materials: List[Material]
+    # vendors: List[Vendor]
 
 class LoginRequest(BaseModel):
     username: str

@@ -8,7 +8,7 @@ from typing import List
 from sqlalchemy.orm import selectinload
 
 from .. import models, schemas, database
-from ..schemas import VendorCreate, MaterialCreate
+from ..schemas import VendorCreate
 from .. import crud
 from ..database import get_db
 from sqlalchemy.orm import joinedload

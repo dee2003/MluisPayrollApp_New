@@ -346,17 +346,17 @@ crew_equipment_association = Table(
     Column('equipment_id', String, ForeignKey('equipment.id', ondelete="CASCADE"), primary_key=True)
 )
 
-crew_material_association = Table(
-    'crew_material_association', Base.metadata,
-    Column('crew_id', Integer, ForeignKey('crew_mapping.id', ondelete="CASCADE"), primary_key=True),
-    Column('material_id', Integer, ForeignKey('materials.id', ondelete="CASCADE"), primary_key=True)
-)
+# crew_material_association = Table(
+#     'crew_material_association', Base.metadata,
+#     Column('crew_id', Integer, ForeignKey('crew_mapping.id', ondelete="CASCADE"), primary_key=True),
+#     Column('material_id', Integer, ForeignKey('materials.id', ondelete="CASCADE"), primary_key=True)
+# )
 
-crew_vendor_association = Table(
-    'crew_vendor_association', Base.metadata,
-    Column('crew_id', Integer, ForeignKey('crew_mapping.id', ondelete="CASCADE"), primary_key=True),
-    Column('vendor_id', Integer, ForeignKey('vendors.id', ondelete="CASCADE"), primary_key=True)
-)
+# crew_vendor_association = Table(
+#     'crew_vendor_association', Base.metadata,
+#     Column('crew_id', Integer, ForeignKey('crew_mapping.id', ondelete="CASCADE"), primary_key=True),
+#     Column('vendor_id', Integer, ForeignKey('vendors.id', ondelete="CASCADE"), primary_key=True)
+# )
 
 crew_dumping_site_association = Table(
     'crew_dumping_site_association', Base.metadata,
@@ -428,11 +428,11 @@ class Category(Base):
     # one-to-many relationship
     equipments = relationship("Equipment", back_populates="category_rel")
 
-class Material(Base):
-    __tablename__ = "materials"
-    id = Column(Integer, Identity(start=1, increment=1), primary_key=True)
-    name = Column(String, unique=True, nullable=False)
-    status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
+# class Material(Base):
+#     __tablename__ = "materials"
+#     id = Column(Integer, Identity(start=1, increment=1), primary_key=True)
+#     name = Column(String, unique=True, nullable=False)
+#     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
 
 
 # class Vendor(Base):
@@ -448,12 +448,23 @@ vendor_material_link = Table(
     Column("vendor_id", Integer, ForeignKey("vendors.id", ondelete="CASCADE")),
     Column("material_id", Integer, ForeignKey("vendor_materials.id", ondelete="CASCADE")),
 )
-
+material_material_link = Table(
+    "material_material_link",
+    Base.metadata,
+    Column("material_id", Integer, ForeignKey("materials_trucking.id", ondelete="CASCADE")),
+    Column("vendor_material_id", Integer, ForeignKey("vendor_materials.id", ondelete="CASCADE"))
+)
+dumping_material_link = Table(
+    "dumping_material_link",
+    Base.metadata,
+    Column("dumping_site_id", String, ForeignKey("dumping_sites.id", ondelete="CASCADE")),
+    Column("material_id", Integer, ForeignKey("vendor_materials.id", ondelete="CASCADE")),
+)
 class Vendor(Base):
     __tablename__ = "vendors"
 
-    id = Column(Integer, primary_key=True, index=True, nullable=False)
-    name = Column(String, nullable=False, unique=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=False, unique=True, nullable=False)
+    name = Column(String, nullable=False)
     vendor_type = Column(String, nullable=True)
     vendor_category = Column(String, nullable=True)
     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
@@ -466,7 +477,37 @@ class Vendor(Base):
         passive_deletes=True
     )
 
+class MaterialTrucking(Base):
+    __tablename__ = "materials_trucking"
 
+    id = Column(Integer, primary_key=True, index=True, autoincrement=False, unique=True, nullable=False)
+    name = Column(String, nullable=False)
+    material_type = Column(String, nullable=True)
+    material_category = Column(String, nullable=True)
+    status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
+
+    materials = relationship(
+        "VendorMaterial",
+        secondary="material_material_link",
+        back_populates="materials_trucking",
+        cascade="all, delete",
+        passive_deletes=True
+    )
+class DumpingSite(Base):
+    __tablename__ = "dumping_sites"
+
+    id = Column(String, primary_key=True, index=True, autoincrement=False, unique=True)
+    name = Column(String, nullable=False)
+    dumping_type = Column(String, nullable=True)
+    dumping_category = Column(String, nullable=True)
+    status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
+
+    # 🔹 Many-to-many with vendor_materials
+    materials = relationship(
+        "VendorMaterial",
+        secondary="dumping_material_link",
+        back_populates="dumping_sites"
+    )
 
 class VendorMaterial(Base):
     __tablename__ = "vendor_materials"
@@ -480,9 +521,20 @@ class VendorMaterial(Base):
         secondary="vendor_material_link",
         back_populates="materials"
     )
+    materials_trucking = relationship(
+        "MaterialTrucking",
+        secondary="material_material_link",
+        back_populates="materials"
+    )
+    dumping_sites = relationship(
+        "DumpingSite",
+        secondary="dumping_material_link",
+        back_populates="materials"
+    )
 
-print("🔍 Secondary table used for vendor-materials link:",
-      Vendor.materials.property.secondary)
+
+# print("🔍 Secondary table used for vendor-materials link:",
+#       Vendor.materials.property.secondary)
 
 class VendorOption(Base):
     __tablename__ = "vendor_options"
@@ -492,11 +544,20 @@ class VendorOption(Base):
     value = Column(String, nullable=False)         # e.g., "Concrete", "Hauler", etc.
 
 
-class DumpingSite(Base):
-    __tablename__ = "dumping_sites"
-    id = Column(String, primary_key=True, index=True)
-    name = Column(String, nullable=False, unique=True)
-    status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
+class MaterialOption(Base):
+    __tablename__ = "material_options"
+
+    id = Column(Integer, Identity(start=1, increment=1), primary_key=True)
+    type = Column(String, nullable=False)  # e.g., 'type', 'category'
+    value = Column(String, unique=True, nullable=False)
+
+class DumpingSiteOption(Base):
+    __tablename__ = "dumping_site_options"
+
+    id = Column(Integer, primary_key=True, index=True)
+    option_type = Column(String, nullable=False)   # "type" or "category"
+    value = Column(String, nullable=False, unique=True)
+
 
 class JobPhase(Base):
     __tablename__ = "job_phases"
@@ -544,8 +605,8 @@ class CrewMapping(Base, SoftDeleteMixin):
     # Many-to-many relationships
     employees = relationship("Employee", secondary=crew_employee_association)
     equipment = relationship("Equipment", secondary=crew_equipment_association)
-    materials = relationship("Material", secondary=crew_material_association)
-    vendors = relationship("Vendor", secondary=crew_vendor_association)
+    # materials = relationship("Material", secondary=crew_material_association)
+    # vendors = relationship("Vendor", secondary=crew_vendor_association)
     dumping_sites = relationship("DumpingSite", secondary=crew_dumping_site_association)
     status = Column(String, default="Active")
 

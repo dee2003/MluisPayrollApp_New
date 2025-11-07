@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from . import models, schemas, database, crud
 from .crud import create_crud_router
-from .routers import timesheet, tickets, review, equipment, submissions, project_engineer,job_phases,vendor_options,vendor_router, vendor_materials
+from .routers import timesheet, tickets, review, equipment, submissions, project_engineer,job_phases,vendor_options,vendor_router, vendor_materials, material_trucking_router, material_option_router, dumping_site_router
 from .ocr import ocr_main
 from sqlalchemy import and_
 from .routers.dropdowns import router as dropdowns_router
@@ -363,8 +363,8 @@ crud_models = [
     {"model": models.Employee, "schemas": (schemas.EmployeeCreate, schemas.Employee)},
     {"model": models.Equipment, "schemas": (schemas.EquipmentCreate, schemas.Equipment)},
     # {"model": models.Vendor, "schemas": (schemas.VendorCreate, schemas.Vendor)},
-    {"model": models.Material, "schemas": (schemas.MaterialCreate, schemas.Material)},
-    {"model": models.DumpingSite, "schemas": (schemas.DumpingSiteCreate, schemas.DumpingSite)},
+    # {"model": models.Material, "schemas": (schemas.MaterialCreate, schemas.Material)},
+    # {"model": models.DumpingSite, "schemas": (schemas.DumpingSiteCreate, schemas.DumpingSite)},
 ]
 
 for item in crud_models:
@@ -392,6 +392,9 @@ app.include_router(job_phases.router)  # ✅ make sure this is here
 app.include_router(vendor_options.router)
 app.include_router(vendor_router.router)
 app.include_router(vendor_materials.router)
+app.include_router(material_trucking_router.router)
+app.include_router(material_option_router.router)
+app.include_router(dumping_site_router.router)
 # -------------------------------
 # Auth Router
 # -------------------------------
@@ -418,7 +421,7 @@ def get_all_data(db: Session = Depends(database.get_db)):
         "employees": db.query(models.Employee).all(),
         "equipment": db.query(models.Equipment).all(),
         "job_phases": db.query(models.JobPhase).all(),
-        "materials": db.query(models.Material).all(),
+        # "materials": db.query(models.Material).all(),
         "vendors": db.query(models.Vendor).all(),
         "dumping_sites": db.query(models.DumpingSite).all(),
     }

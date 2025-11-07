@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import CrewMappingManager from './CrewMappingManager';
@@ -102,7 +101,7 @@ const getIconForSection = (sec) => {
         case "employees": return <FaUser />;
         case "equipment": return <FaHardHat />;
         case "job-phases": return <FaTasks />;
-        case "materials": return <FaBox />;
+        case "materials_trucking": return <FaBox />;
         case "vendors": return <FaBriefcase />;
         case "crewMapping": return <FaUsers />;
         case "dumping_sites": return <FaTrash />;
@@ -112,7 +111,7 @@ const getIconForSection = (sec) => {
 
 // --- Generic Form Component (Unchanged) ---
 
-const GenericForm = ({ fields,vendorOptions, fetchVendorOptions, onSubmit, defaultValues = {}, errorMessage,genericErrorMessage, categories = [] }) => {
+const GenericForm = ({ fields,vendorOptions, fetchVendorOptions,materialOptions,fetchMaterialOptions,fetchDumpingSiteOptions,dumpingSiteOptions, onSubmit, defaultValues = {}, errorMessage,genericErrorMessage, categories = [] }) => {
     const [formData, setFormData] = useState(defaultValues);
     const [errors, setErrors] = useState({}); // Add this state for inline errors
 
@@ -158,11 +157,6 @@ const addMaterialRow = () => {
         return error;
     };
 
-    // const handleChange = e => {
-    //     const { name, value } = e.target;
-    //     setValues(prev => ({ ...prev, [name]: value }));
-    //     validateField(name, value);
-    // };
 const handleChange = (e) => {
   if (!e || !e.target) return; // prevent crash
   const { name, value } = e.target;
@@ -243,158 +237,6 @@ const handleSubmit = e => {
   }
 };
 
-
-// return (
-//     <form onSubmit={handleSubmit}>
-//         {genericErrorMessage && <div className="form-error-top">{genericErrorMessage}</div>}
-        
-//         {fields.map(field => (
-//             <div className="form-group" key={field.name}>
-//                 <label className="form-label">
-//                     {field.label}
-//                     {field.required && <span style={{ color: 'red' }}> *</span>}
-//                 </label>
-
-//                 {/* This wrapper aligns the input and the "Add New" button side-by-side */}
-//                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-
-//                     {/* This div makes the input/select take up the available space */}
-//                     <div style={{ flex: 1 }}>
-//                         {field.type === "select" ? (
-//                             <select name={field.name} className="form-control" value={values[field.name] || ""} onChange={handleChange}>
-//                                 {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-//                             </select>
-//                         ) : (
-//                             <input
-//                                 type={field.type || "text"}
-                             
-//                                 name={field.name}
-//                                 className="form-control"
-//                                 value={values[field.name] || ""}
-//                                 onChange={handleChange}
-//                                 required={field.required}
-//                                 readOnly={field.readOnly || false}
-
-//                                 autoComplete={field.type === "password" ? "new-password" : "off"}
-//                             />
-//                         )}
-//                     </div>
-
-//                     {/* --- CHANGE IS HERE --- */}
-//                     {/* This code checks if a field should have an "Add New" button and renders it */}
-//                     {field.onAddNew && (
-//                         <button
-//                             type="button"
-//                             onClick={field.onAddNew}
-//                             className="btn btn-sm btn-outline"
-//                             style={{ whiteSpace: 'nowrap' }} // Keeps "Add New" on one line
-//                         >
-//                             Add New
-//                         </button>
-//                     )}
-//                     {/* --- END OF CHANGE --- */}
-
-//                 </div>
-
-//                 {errors[field.name] && <small style={{ color: 'red', fontSize: '12px' }}>{errors[field.name]}</small>}
-//             </div>
-//         ))}
-        
-//         <div className="modal-actions">
-//             <button type="submit" className="btn btn-primary">Save</button>
-//         </div>
-//     </form>
-//     return (
-//   <form onSubmit={handleSubmit} className="generic-form">
-//     {errorMessage && (
-//       <div className="form-error-top">{errorMessage}</div>
-//     )}
-
-//     {fields.map((field, index) => {
-//       if (field.type === "multi_material") {
-//         console.log("Material options:", vendorOptions.material);
-
-//   return (
-    
-//     <MultiSelectWithAdd
-//       key={index}
-//       label={field.label}
-//       options={vendorOptions.material || []}
-
-//       value={values.material_ids || []}
-//       onChange={(selected) => setValues(prev => ({ ...prev, material_ids: selected }))}
-//       reloadOptions={fetchVendorOptions}
-//     />
-//   );
-// }
-
-  
-//   if (field.type === "custom") {
-//   return (
-//     <SelectWithAdd
-//       key={index}
-//       label={field.label}
-//       type={field.customType}
-//       options={(vendorOptions?.[field.customType] || []).map(v => ({ value: v, label: v }))}
-//       value={values[field.name] || ""}
-//       onChange={(e) => setValues(prev => ({ ...prev, [field.name]: e.target.value }))}
-//       reloadOptions={fetchVendorOptions}
-//     />
-//   );
-// }
-
-//       // 🧩 Regular select or input
-//       return (
-//         <div className="form-group" key={field.name}>
-//           <label className="form-label">{field.label}</label>
-
-//           {field.type === "select" ? (
-//             <select
-//               name={field.name}
-//               className="form-control"
-//               value={values[field.name] || ""}
-//               onChange={handleChange}
-//               required={field.required}
-              
-//             >
-//               <option value="">Select {field.label}</option>
-//               {field.options.map((opt) => (
-//                 <option key={opt.value} value={opt.value}>
-//                   {opt.label}
-//                 </option>
-//               ))}
-//             </select>
-//           ) : (
-//             <input
-//               type={field.type || "text"}
-//               name={field.name}
-//               className="form-control"
-//               value={values[field.name] || ""}
-//               onChange={handleChange}
-//               required={field.required}
-//               readOnly={field.readOnly || false}
-//               autoComplete={field.type === "password" ? "new-password" : "off"}
-//             />
-//           )}
-
-//           {errors[field.name] && (
-//             <small style={{ color: "red", fontSize: "12px" }}>
-//               {errors[field.name]}
-//             </small>
-//           )}
-//         </div>
-//       );
-//     })}
-
-//     <div className="modal-actions">
-//       <button type="submit" className="btn btn-primary">
-//         Save
-//       </button>
-//     </div>
-//   </form>
-// );
-
-// };
 return (
   <form onSubmit={handleSubmit} className="generic-form">
     {/* Top error message */}
@@ -420,24 +262,49 @@ return (
       }
 
       // Custom select with add
-      if (field.type === "custom") {
-        return (
-          <SelectWithAdd
-            key={index}
-            label={field.label}
-            type={field.customType}
-            options={(vendorOptions?.[field.customType] || []).map((v) => ({
-              value: v,
-              label: v,
-            }))}
-            value={values[field.name] || ""}
-            onChange={(e) =>
-              setValues((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
-            reloadOptions={fetchVendorOptions}
-          />
-        );
+   if (field.type === "custom") {
+  // Decide whether this is vendor, material, or dumping site dropdown
+  const isMaterial = ["material_type", "material_category"].includes(field.customType);
+  const isDumping = ["dumping_type", "dumping_category"].includes(field.customType);
+
+  let optionsSource;
+  let reloadFunction;
+
+  if (isMaterial) {
+    optionsSource = materialOptions;
+    reloadFunction = fetchMaterialOptions;
+  } else if (isDumping) {
+    optionsSource = dumpingSiteOptions;
+    reloadFunction = fetchDumpingSiteOptions;
+  } else {
+    optionsSource = vendorOptions;
+    reloadFunction = fetchVendorOptions;
+  }
+
+  // Determine which key in optionsSource to use
+  const optionsKey = isMaterial
+    ? field.customType === "material_type" ? "type" : "category"
+    : isDumping
+      ? field.customType === "dumping_type" ? "type" : "category"
+      : field.customType;
+
+  return (
+    <SelectWithAdd
+      key={index}
+      label={field.label}
+      type={field.customType}
+      options={(optionsSource?.[optionsKey] || []).map((v) => ({
+        value: v.value || v,
+        label: v.label || v,
+      }))}
+      value={values[field.name] || ""}
+      onChange={(e) =>
+        setValues((prev) => ({ ...prev, [field.name]: e.target.value }))
       }
+      reloadOptions={reloadFunction}
+    />
+  );
+}
 
       // Regular input or select with optional Add New
       return (
@@ -753,7 +620,21 @@ const SelectWithAdd = ({ label, options, type, onChange, value, reloadOptions })
   const handleAddOption = async () => {
     if (!newOption.trim()) return;
     try {
-      await axios.post(`http://localhost:8000/api/vendor-options/${type}?value=${encodeURIComponent(newOption)}`);
+      const endpoint = type.startsWith("material_")
+      ? "material-options"
+      : type.startsWith("dumping_")
+      ? "dumping-sites/options"
+      : "vendor-options";
+
+const queryParam =
+      type.startsWith("dumping_") ? "option_type" : "type";
+
+    await axios.post(
+  `http://localhost:8000/api/${endpoint}?${queryParam}=${type}&value=${encodeURIComponent(newOption)}`
+);
+
+
+      // await axios.post(`http://localhost:8000/api/vendor-options/${type}?value=${encodeURIComponent(newOption)}`);
       alert(`${newOption} added to ${type}`);
       setNewOption("");
       setShowAdd(false);
@@ -970,6 +851,66 @@ const [subModal, setSubModal] = useState({ shown: false, type: null, title: '' }
 // ...
 const [form, setForm] = useState({});
 
+// 🔹 Dumping Site States
+const [dumpingSiteOptions, setDumpingSiteOptions] = useState({
+  type: [],
+  category: [],
+});
+
+// 🔹 Fetch Dumping Site Type & Category Options
+const fetchDumpingSiteOptions = async () => {
+  try {
+    const [typeRes, categoryRes] = await Promise.all([
+      axios.get("http://localhost:8000/api/dumping-sites/options/?option_type=dumping_type"),
+      axios.get("http://localhost:8000/api/dumping-sites/options/?option_type=dumping_category"),
+    ]);
+
+    setDumpingSiteOptions({
+      type: typeRes.data,      // ✅ no need to map again
+      category: categoryRes.data, // ✅ no need to map again
+    });
+
+    console.log("Fetched Dumping Site Options", {
+      type: typeRes.data,
+      category: categoryRes.data,
+    });
+  } catch (err) {
+    console.error("Error fetching Dumping Site Options:", err);
+  }
+};
+
+console.log("Dumping Sites Data:", data.dumping_sites);
+
+
+useEffect(() => {
+  fetchDumpingSiteOptions();
+}, []);
+
+
+const [materialOptions, setMaterialOptions] = useState({
+  type: [],
+  category: []
+});
+
+const fetchMaterialOptions = async () => {
+  try {
+    const [typeRes, categoryRes] = await Promise.all([
+      axios.get("http://localhost:8000/api/material-options?type=material_type"),
+      axios.get("http://localhost:8000/api/material-options?type=material_category"),
+    ]);
+
+    setMaterialOptions({
+  type: typeRes.data.map(opt => ({label: opt.value, value: opt.value})),
+  category: categoryRes.data.map(opt => ({label: opt.value, value: opt.value}))
+});
+
+  } catch (err) {
+    console.error("Error fetching material options:", err);
+  }
+};
+useEffect(() => {
+  fetchMaterialOptions();
+}, []);
 
 const [vendorOptions, setVendorOptions] = useState({
   type: [],
@@ -1004,11 +945,33 @@ const fetchVendorOptions = async () => {
     console.error("Error fetching vendor options:", err);
   }
 };
+const fetchMaterialsTrucking = async () => {
+  try {
+    const res = await axios.get("http://localhost:8000/api/materials-trucking/");
+    setData((prev) => ({ ...prev, materials_trucking: res.data }));
+  } catch (err) {
+    console.error("Error fetching Materials & Trucking:", err);
+  }
+};
+const fetchDumpingSites = async () => {
+  try {
+    const res = await axios.get("http://localhost:8000/api/dumping-sites/");
+    setData(prev => ({ ...prev, dumping_sites: res.data }));
+  } catch (err) {
+    console.error("Error fetching Dumping Sites:", err);
+  }
+};
+
 
 useEffect(() => {
   fetchVendorOptions();
+  fetchMaterialsTrucking();
+  fetchDumpingSites();
 }, []);
 
+useEffect(() => {
+  console.log("Fetched Material Options:", materialOptions);
+}, [materialOptions]);
 
 
 useEffect(() => {
@@ -1155,7 +1118,7 @@ useEffect(() => {
         };
     }, [isResizing]);
 
-    const typeToStateKey = { user: "users", employee: "employees", equipment: "equipment", job_phase: "job-phases", material: "materials", vendor: "vendors", dumping_site: "dumping_sites" };
+    const typeToStateKey = { user: "users", employee: "employees", equipment: "equipment", job_phase: "job-phases", materials_trucking: "materials_trucking", vendor: "vendors", dumping_sites: "dumping_sites" };
 
     const onUpdate = (key, newList) => setData(prev => ({ ...prev, [key]: newList }));
 
@@ -1200,7 +1163,10 @@ const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) 
   setFormError('');
   setFieldErrors({});
 
-  const formData = { ...itemData }; // Raw data from form
+  const formData = {
+    ...itemData,
+    material_ids: (itemData.material_ids || []).filter(id => id !== undefined),
+  }; // Raw data from form
   let payload;
 
   try {
@@ -1214,15 +1180,107 @@ const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) 
       if (mode === "add") {
         response = await axios.post(baseUrl, formData);
         alert("Vendor added successfully");
+         onUpdate("vendors", [...(data["vendors"] || []), response.data]);
       } else {
         response = await axios.put(`${baseUrl}${existingItem.id}/`, formData);
         alert("Vendor updated successfully");
+        onUpdate(
+      "vendors",
+      (data["vendors"] || []).map(v => v.id === existingItem.id ? response.data : v)
+    );
       }
+const fullRes = await axios.get(baseUrl);
+      onUpdate("vendors", fullRes.data);
 
       if (typeof fetchVendorOptions === "function") await fetchVendorOptions();
       closeMainModal();
       return; // Stop further execution
     }
+
+
+    if (type === "materials_trucking") {
+  const baseUrl = "http://localhost:8000/api/materials-trucking/";
+
+  try {
+  let response;
+
+  if (mode === "add") {
+    response = await axios.post(baseUrl, formData);
+    alert("✅ Material/Trucking added successfully");
+    onUpdate("materials_trucking", [
+      response.data,
+      ...(data["materials_trucking"] || []),
+    ]);
+  } else {
+    response = await axios.put(`${baseUrl}${existingItem.id}/`, formData);
+    alert("✅ Material/Trucking updated successfully");
+    onUpdate(
+      "materials_trucking",
+      (data["materials_trucking"] || []).map((m) =>
+        m.id === existingItem.id ? response.data : m
+      )
+    );
+  }
+
+  if (typeof fetchMaterialOptions === "function") await fetchMaterialOptions();
+  closeMainModal();
+  return;
+
+} catch (err) {
+  console.error("Error while saving Material/Trucking:", err.response?.data || err);
+
+  // 🔹 Handle duplicate ID error or any backend 400 message
+  if (err.response && err.response.status === 400 && err.response.data?.detail) {
+    alert(`❌ ${err.response.data.detail}`);
+  } else {
+    alert("❌ Failed to save Material/Trucking. Please check your input.");
+  }
+}
+
+}
+if (type === "dumping_sites") {
+  try {
+    // Map form fields to backend expected keys
+    // const payload = {
+    //   ...formData,
+    //   dumping_type: formData.dumping_type || formData.type,        // map type -> dumping_type
+    //   dumping_category: formData.dumping_category || formData.category, // map category -> dumping_category
+    //   material_ids: (vendorData.materials || [])
+    // .map(m => m.id)      // must be valid numbers
+    // .filter(id => id !== undefined),       // map selected materials
+    // };
+
+    let response;
+    if (mode === "add") {
+      response = await axios.post("http://localhost:8000/api/dumping-sites/", formData);
+      console.log("Response:", response.data); 
+      alert("Dumping Site added successfully");
+      // onUpdate("dumping_sites", [response.data, ...(data["dumping_sites"] || [])]);
+    onUpdate(type, [response.data, ...(data[type] || [])]);
+    } else {
+      response = await axios.put(`http://localhost:8000/api/dumping-sites/${existingItem.id}/`, formData);
+      console.log("Response:", response.data); 
+      alert("Dumping Site updated successfully");
+       onUpdate(
+        type,
+        (data[type] || []).map(d => d.id === existingItem.id ? response.data : d)
+      );
+    }
+
+    if (typeof fetchDumpingSiteOptions === "function") await fetchDumpingSiteOptions();
+    closeMainModal();
+
+  } catch (err) {
+    console.error("Error saving dumping site:", err);
+    if (err.response && err.response.status === 400 && err.response.data.detail === "ID already exists") {
+      alert("❌ Dumping Site ID already exists. Please choose a different ID.");
+    } else {
+      alert("❌ Failed to save dumping site.");
+    }
+  }
+  return;
+}
+
 
     if (type === 'equipment') {
       // Validation
@@ -1329,189 +1387,6 @@ const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) 
 };
 
 
-
-// const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) => {
-//     const stateKey = typeToStateKey[type];
-//     setFormError('');
-//     setFieldErrors({});
-
-//     // This is the raw data from your form
-//     const formData = { ...itemData };
-
-//     // This will hold the final, clean data to be sent to the backend
-//     let payload;
-
-//     // --- START: TYPE-SPECIFIC PAYLOAD PREPARATION ---
-// try {
-//     let response;
-//     const cleanData = { ...itemData };
-//      if (type === "vendor") {
-//   const baseUrl = "http://localhost:8000/api/vendors/";
-
-//   if (mode === "add") {
-//     response = await axios.post(baseUrl, cleanData);
-//     alert("Vendor added successfully");
-//   } else {
-//     response = await axios.put(`${baseUrl}${existingItem.id}/`, cleanData);
-//     alert("Vendor updated successfully");
-//   }
-
-//   // Optional: refresh vendor list
-//   if (typeof fetchVendorOptions  === "function") await fetchVendorOptions ();
-  
-//   closeMainModal();
-//   return; // stop further execution here
-// }
-
-//     if (type === 'equipment') {
-//         // 1. For 'equipment', we manually construct the payload
-//         //    to match the backend's snake_case schema.
-
-//         // Client-side validation before constructing the payload
-//         if (!formData.id || formData.id.trim() === '') {
-//             setFieldErrors({ id: 'Equipment ID is a required field.' });
-//             return;
-//         }
-//         if (!formData.departmentId) {
-//             setFieldErrors({ departmentId: 'Department is required.' });
-//             return;
-//         }
-//         if (!formData.categoryid) {
-//             setFieldErrors({ categorynumber: 'Category Number is required.' });
-//             return;
-//         }
-
-//         // Build the payload with the exact field names and types the backend expects
-//         payload = {
-//             id: formData.id,
-//             name: formData.name,
-//             department_id: parseInt(formData.departmentId, 10),
-//             category_id: parseInt(formData.categoryid, 10),
-//             vin_number: formData.vinnumber || null,
-//             status: (formData.status || 'Active').toLowerCase()
-//         };
-
-//     } else if (['user', 'dumpingsite'].includes(type)) {
-//         // 2. For 'user' and 'dumpingsite', the primary task is converting their ID to a number.
-
-//         if (formData.id) {
-//             const numericId = parseInt(formData.id, 10);
-//             if (isNaN(numericId)) {
-//                 setFieldErrors({ id: 'ID must be a valid number.' });
-//                 return;
-//             }
-//             formData.id = numericId; // Update the ID in the formData object
-//         }
-//         payload = { ...formData }; // The rest of the fields are correct
-
-//     } else {
-//         // 3. For 'employee' and all other types, the form data is already in the correct format.
-//         payload = { ...formData };
-//     }
-//     closeMainModal();
-// } 
-// catch (error) {
-//     const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : "An unexpected error occurred.";
-//     setFormError(`Error: ${errorMessage}`);
-//   }
-
-// };
-
-//     // Normalize status to lowercase if it exists in the final payload
-//     if (payload.status) {
-//         payload.status = payload.status.toLowerCase();
-//     }
-
-//     // --- END: PAYLOAD PREPARATION ---
-
-
-//     // --- Client-side duplicate checks ---
-//     if (mode === 'add') {
-//         const newErrors = {};
-//         if (type === 'equipment' && data.equipment.some(equip => equip.id === payload.id)) {
-//             newErrors.id = 'Equipment ID already exists.';
-//         } else if (type === 'user' && data.users.some(user => user.id === payload.id)) {
-//             newErrors.id = 'User ID already exists.';
-//         } else if (type === 'employee' && data.employees.some(emp => emp.id === payload.id)) {
-//             newErrors.id = 'Employee ID already exists.';
-//         } // ... etc.
-
-//         if (Object.keys(newErrors).length > 0) {
-//             setFieldErrors(newErrors);
-//             return;
-//         }
-//     }
-
-
-//     try {
-//         let response;
-//         if (mode === "edit" && existingItem) {
-//             const itemId = existingItem.id;
-//             response = await axios.put(`${API_URL}/${stateKey}/${encodeURIComponent(itemId)}`, payload);
-//             onUpdate(stateKey, (data[stateKey] || []).map(it => it.id === itemId ? response.data : it));
-//         } else {
-//             response = await axios.post(`${API_URL}/${stateKey}/`, payload);
-//             onUpdate(stateKey, [response.data, ...(data[stateKey] || [])]);
-//         }
-//         closeMainModal();
-//     } catch (error) {
-//         // Your existing, excellent error handling logic remains here
-//         const errorData = error.response?.data?.detail;
-//         if (error.response?.status === 422 && errorData) {
-//             const newErrors = {};
-//             if (Array.isArray(errorData)) {
-//                 errorData.forEach(err => {
-//                     if (err.loc && err.loc.length > 1) {
-//                         const backendField = err.loc[1];
-//                         const frontendField = {
-//                             'department_id': 'departmentId',
-//                             'category_id': 'categoryid'
-//                         }[backendField] || backendField;
-//                         newErrors[frontendField] = err.msg;
-//                     }
-//                 });
-//             }
-//             setFieldErrors(newErrors);
-//         } else {
-//             setFormError('An unexpected error occurred.');
-//         }
-//         console.error(`Error processing ${type}:`, error);
-//     }
-// };
-
-// const handleToggleStatus = async (type, item, newStatus) => {
-//   const stateKey = typeToStateKey[type];
-//   const updatedItem = { ...item, status: newStatus.toLowerCase() };
-
-//   // Remove nested relational fields before sending
-//   const { category_rel, department_rel, ...cleanPayload } = updatedItem;
-
-//   console.log(`Changing status for ${type} id:${item.id}`, cleanPayload);
-
-//   try {
-//     const response = await axios.put(
-//       `${API_URL}/${stateKey}/${encodeURIComponent(item.id)}`,
-//       cleanPayload
-//     );
-
-//     // Update UI immediately
-//     setData((prev) => ({
-//       ...prev,
-//       [stateKey]: (prev[stateKey] || []).map((it) =>
-//         it.id === item.id ? response.data : it
-//       ),
-//     }));
-//   } catch (error) {
-//     console.error("Error updating status:", error);
-//     alert(
-//       `Error updating status: ${
-//         error.response?.data
-//           ? JSON.stringify(error.response.data)
-//           : "Unexpected error"
-//       }`
-//     );
-//   }
-// };
 
 // In AdminDashboard.js
 
@@ -1675,9 +1550,75 @@ case "vendor":
     },
   ];
 
+ case "materials_trucking":
+  return [
+    { name: "id", label: "Material/Trucking ID", type: "number", required: true },
+    { name: "name", label: "Name", required: true },
+    {
+      name: "material_type",
+      label: "Type",
+      type: "custom",
+      customType: "material_type", // new endpoint
+    },
+    {
+      name: "material_category",
+      label: "Category",
+      type: "custom",
+      customType: "material_category", // new endpoint
+    },
+    {
+      name: "materials",
+      label: "Materials (with Units)",
+      type: "multi_material",
+    },
+    {
+      name: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+      ],
+      required: true,
+      defaultValue: "active",
+    },
+  ];
+   
     
-    case "material": return [ { name: "name", label: "Material/Trucking Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
-            case "dumping_site": return [ { name: "id", label: "Site ID", required: true }, { name: "name", label: "Site Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
+  case "dumping_sites":
+  return [
+    { name: "id", label: "Dumping Site ID", type: "text", required: true },
+    { name: "name", label: "Name", required: true },
+    {
+      name: "dumping_type",
+      label: "Type",
+      type: "custom",
+      customType: "dumping_type", // endpoint for dumping type options
+    },
+    {
+      name: "dumping_category",
+      label: "Category",
+      type: "custom",
+      customType: "dumping_category", // endpoint for dumping category options
+    },
+    {
+      name: "materials",
+      label: "Materials (with Units)",
+      type: "multi_material", // same multi-material selector component
+    },
+    {
+      name: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+      ],
+      required: true,
+      defaultValue: "active",
+    },
+  ];
+
             default: return [];
         }
     };
@@ -1743,6 +1684,103 @@ const getEquipmentFormFields = (form, setForm) => {
         ),
       };
     }
+if (field.name === "material_type") {
+      return {
+        ...field,
+        customRender: () => (
+          <SelectWithAdd
+            label="Material Type"
+            type="material_type"
+            options={materialOptions.type.map((m) => ({
+              value: m,
+              label: m,
+            }))}
+            value={form.material_type}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                material_type: e.target.value,
+              }))
+            }
+            reloadOptions={fetchMaterialOptions} // new reload for material
+          />
+        ),
+      };
+    }
+
+    // 🧩 Material Category (NEW)
+    if (field.name === "material_category") {
+      return {
+        ...field,
+        customRender: () => (
+          <SelectWithAdd
+            label="Material Category"
+            type="material_category"
+            options={materialOptions.category.map((m) => ({
+              value: m,
+              label: m,
+            }))}
+            value={form.material_category}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                material_category: e.target.value,
+              }))
+            }
+            reloadOptions={fetchMaterialOptions} // new reload for material
+          />
+        ),
+      };
+    }
+// 🧱 Dumping Type
+if (field.name === "dumping_type") {
+  return {
+    ...field,
+    customRender: () => (
+      <SelectWithAdd
+        label="Dumping Type"
+        type="dumping_type"
+        options={dumpingSiteOptions.type.map((d) => ({
+          value: d,
+          label: d,
+        }))}
+        value={form.dumping_type}
+        onChange={(e) =>
+          setForm((prev) => ({
+            ...prev,
+            dumping_type: e.target.value,
+          }))
+        }
+        reloadOptions={fetchDumpingSiteOptions} // separate reload for dumping options
+      />
+    ),
+  };
+}
+
+// 🗂️ Dumping Category
+if (field.name === "dumping_category") {
+  return {
+    ...field,
+    customRender: () => (
+      <SelectWithAdd
+        label="Dumping Category"
+        type="dumping_category"
+        options={dumpingSiteOptions.category.map((d) => ({
+          value: d,
+          label: d,
+        }))}
+        value={form.dumping_category}
+        onChange={(e) =>
+          setForm((prev) => ({
+            ...prev,
+            dumping_category: e.target.value,
+          }))
+        }
+        reloadOptions={fetchDumpingSiteOptions} // separate reload for dumping options
+      />
+    ),
+  };
+}
 
     return field;
   });
@@ -1812,6 +1850,8 @@ const makeTableWithPagination = (type, title, headers, rowRender, extra = null) 
       (currentPage - 1) * itemsPerPage,
       currentPage * itemsPerPage
     );
+console.log('Dumping Sites data for rendering: ', pagedData);
+console.log('Raw dumping_sites data:', data[key]);
 
     // This prevents being stuck on an empty page after filtering
     if (pagedData.length === 0 && activeData.length > 0) {
@@ -1972,17 +2012,40 @@ case "equipment":
 
 
 
+case "materials_trucking":
+  return makeTableWithPagination(
+    "materials_trucking",
+    "Materials & Trucking",
+    ["ID", "Name", "Type", "Category", "Materials", "Unit", "Status"],
+    (m) => {
+      // Extract materials & units safely
+      const materialNames = m.materials?.length
+        ? m.materials.map(mat => mat.material || "-").join(", ")
+        : "-";
+
+      const units = m.materials?.length
+        ? m.materials.map(mat => mat.unit || "-").join(", ")
+        : "-";
+
+      return (
+        <>
+          <td>{m.id}</td>
+          <td>{m.name}</td>
+          <td>{m.material_type || "-"}</td>
+          <td>{m.material_category || "-"}</td>
+          <td>{materialNames}</td>
+          <td>{units}</td>
+          <td>{capitalizeFirstLetter(m.status)}</td>
+        </>
+      );
+    },
+    "Materials & Trucking"
+  );
 
 
 
 
-
-
-
-
-            case "materials": 
-                return makeTableWithPagination("material", "Materials and Trucking", ["Name", "Status"], m => <><td key={m.name}>{m.name}</td><td key={m.status}>{capitalizeFirstLetter(m.status)}</td>
-</>, "Material and Trucking");
+           
 case "job-phases":
   return (
     <DataTableSection 
@@ -2018,9 +2081,34 @@ case "job-phases":
     />
   );
 
-            case "dumping_sites": 
-                return makeTableWithPagination("dumping_site", "Dumping Site Management", ["Site ID", "Site Name", "Status"], ds => (<><td key={ds.id}>{ds.id}</td><td key={ds.name}>{ds.name}</td><td key={ds.status}>{capitalizeFirstLetter(ds.status)}</td>
-</>), "Dumping Site");
+         case "dumping_sites":
+  return makeTableWithPagination(
+    "dumping_sites",
+    "Dumping Sites",
+    ["ID", "Name", "Type", "Category", "Materials", "Unit", "Status"],
+    (d) => (
+      <>
+        <td>{d.id || "-"}</td>
+        <td>{d.name || "-"}</td>
+        <td>{d.dumping_type || "-"}</td>
+        <td>{d.dumping_category || "-"}</td>
+        <td>
+          {d.materials?.length
+            ? d.materials.map(m => m.material).join(", ")
+            : "-"}
+        </td>
+        <td>
+          {d.materials?.length
+            ? d.materials.map(m => m.unit).join(", ")
+            : "-"}
+        </td>
+        <td>{d.status ? capitalizeFirstLetter(d.status) : "-"}</td>
+      </>
+    ),
+    "Dumping Sites"
+  );
+
+
             case "crewMapping": 
                 const allResources = { 
                             users: (data.users || []).filter(u => u.status === 'active'),
@@ -2068,12 +2156,18 @@ const addMaterialRow = () => {
     }
     vendorOptions={vendorOptions}
     fetchVendorOptions={fetchVendorOptions}
+    materialOptions={materialOptions}
+    fetchMaterialOptions={fetchMaterialOptions}
+    dumpingSiteOptions ={dumpingSiteOptions}
+    fetchDumpingSiteOptions= {fetchDumpingSiteOptions}
     categories={categories} 
     defaultValues={modal.item || {}}
     onSubmit={(formData) => {
   const finalData = {
     ...formData,
     materials: vendorData.materials,  // ✅ send as list of objects
+    dumping_type: formData.dumping_type || formData.type,      // map type → dumping_type
+  dumping_category: formData.dumping_category || formData.category,
   };
   handleAddOrUpdateItem(modal.type, finalData, modal.mode, modal.item);
 }}
@@ -2133,7 +2227,7 @@ const addMaterialRow = () => {
                         "employees",
                         "equipment",
                         "job-phases",
-                        "materials",
+                        "materials_trucking",
                         "vendors",
                         "dumping_sites",
                         "crewMapping",
@@ -2154,7 +2248,7 @@ const addMaterialRow = () => {
                                             ? "Crew Mapping"
                                             : sec === "vendors"
                                             ? "Work Performed"
-                                            : sec === "materials"
+                                            : sec === "materials_trucking"
                                             ? "Materials & Trucking"
                                             : sec === "dumping_sites"
                                             ? "Dumping Sites"
