@@ -125,15 +125,18 @@ const TimesheetDetails = () => {
       {/* Main Content Section */}
       <div
         className="main-content"
-        style={{ marginLeft: sidebarCollapsed ? 60 : 250 }}
+        style={{ marginLeft: sidebarCollapsed ? 60 : 300 }}
       >
         <div className="page-header">
-          <button
-            className="back-btn"
-            onClick={() => navigate("/", { state: { section: "viewTimesheets", refresh: Date.now() } })}
-          >
-            <FaArrowLeft /> Back
-          </button>
+
+<button
+    className="back-btn"
+    // Change 'section' to 'activeSection' to match the other component
+    onClick={() => navigate("/", { state: { activeSection: "viewTimesheets", refresh: Date.now() } })}
+>
+    <FaArrowLeft /> Back
+</button>
+
           <h2 className="page-title">{ts.timesheet_name}</h2>
         </div>
 

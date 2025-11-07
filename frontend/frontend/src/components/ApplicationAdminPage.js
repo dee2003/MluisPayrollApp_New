@@ -12,21 +12,31 @@ import { useNavigate } from "react-router-dom";
 import TimesheetForm from "./TimesheetForm.jsx";
 import axios from "axios";
 import "./ApplicationAdmin.css";
+import { useLocation } from 'react-router-dom'; // Import useLocation
 
 const TIMESHEETS_PER_PAGE = 2;
 const API_URL = "http://127.0.0.1:8000/api";
 
 export default function ApplicationAdmin() {
+  
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState("projects");
-  const [timesheets, setTimesheets] = useState([]);
+    const location = useLocation();
+        const navigate = useNavigate();
+
+        console.log("LOGIN DEBUG: Full location object on mount is:", location);
+
+// This code is already correct and looks for 'activeSection' from the location state.
+const [activeSection, setActiveSection] = useState(
+    location.state?.activeSection || 'createTimesheet'
+);
+
+      const [timesheets, setTimesheets] = useState([]);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("");
-
   const [currentPage, setCurrentPage] = useState(1);
   const timesheetsPerPage = TIMESHEETS_PER_PAGE;
 
@@ -60,7 +70,6 @@ export default function ApplicationAdmin() {
 
   const [mappings, setMappings] = useState({});
   const [loadingMappings, setLoadingMappings] = useState({});
-  const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
@@ -283,7 +292,7 @@ export default function ApplicationAdmin() {
       </nav>
       <main
         className="admin-content"
-        style={{ marginLeft: sidebarCollapsed ? 60 : 0 }}
+        style={{ marginLeft: sidebarCollapsed ? 60 : 250 }}
       >
         {activeSection === "createTimesheet" && (
           <div className="timesheet-page-content">

@@ -228,14 +228,13 @@ class VendorCreate(BaseModel):
     material_ids: Optional[List[int]] = []
 
 
-# 🔹 Vendor (read)
 class VendorRead(BaseModel):
     id: int
     name: str
-    vendor_type: Optional[str]
-    vendor_category: Optional[str]
-    status: Optional[str]
-    materials: List[VendorMaterialRead] = []
+    vendor_type: Optional[str] = None
+    vendor_category: Optional[str] = None
+    status: Optional[str] = None
+    material_ids: List[int] = []
 
     class Config:
         orm_mode = True
@@ -243,14 +242,87 @@ class VendorRead(BaseModel):
 
 
 
+# # ===============================
+# #         JOB PHASES
+# # ===============================
+# # In backend/schemas.py
+
+# # ... (other imports and schemas)
+
+# # ✅ ADD THIS: A schema to represent a single, nested PhaseCode object in the response.
+# class PhaseCode(BaseModel):
+#     id: int
+#     code: str
+#     description: Optional[str] = None
+#     unit: Optional[str] = None
+
+#     class Config:
+#         orm_mode = True
+
+# # This schema is for CREATING a JobPhase. It correctly uses a list of strings.
+# class JobPhaseBase(BaseModel):
+#     job_code: str
+#     contract_no: Optional[str] = None
+#     job_description: Optional[str] = None
+#     project_engineer: Optional[str] = None
+#     jurisdiction: Optional[str] = None
+#     location_id: Optional[int] = None
+#     project_engineer_id: Optional[int] = None  # 👈 new
+#     project_engineer: Optional[str] = None     # 👈 keep existing
+#     status: ResourceStatus = ResourceStatus.ACTIVE
+#     phase_codes: List[str] = []
+#     jurisdiction: Optional[str] = None         # ✅ add this line
+
+
+
+# class JobPhaseCreate(JobPhaseBase):
+#     pass
+
+# #class JobPhaseUpdate(BaseModel):
+
+# class JobPhaseUpdate(BaseModel):
+#     contract_no: Optional[str] = None
+#     job_description: Optional[str] = None
+#     project_engineer_id: Optional[int] = None  # 👈 new
+#     project_engineer: Optional[str] = None     # 👈 keep existing
+#     jurisdiction: Optional[str] = None
+#     status: Optional[ResourceStatus] = None
+#     phase_codes: Optional[List[str]] = None
+
+
+# class JobPhase(BaseModel):
+#     id: int
+#     job_code: str
+#     contract_no: Optional[str] = None
+#     job_description: Optional[str] = None
+#     project_engineer_id: Optional[int] = None
+#     project_engineer: Optional[str] = None
+#     jurisdiction: Optional[str] = None
+#     status: ResourceStatus
+#     phase_codes: List[PhaseCode] = []
+
+#     class Config:
+#         orm_mode = True
+
+
+# class LocationBase(BaseModel):
+#     name: str
+
+# class LocationOut(LocationBase):
+#     id: int
+#     class Config:
+#         orm_mode = True
+
 # ===============================
 #         JOB PHASES
 # ===============================
-# In backend/schemas.py
 
-# ... (other imports and schemas)
+from pydantic import BaseModel
+from typing import List, Optional
+from .models import ResourceStatus  # if you have this Enum
 
-# ✅ ADD THIS: A schema to represent a single, nested PhaseCode object in the response.
+
+# ✅ PhaseCode schema for nested response
 class PhaseCode(BaseModel):
     id: int
     code: str
@@ -260,37 +332,36 @@ class PhaseCode(BaseModel):
     class Config:
         orm_mode = True
 
-# This schema is for CREATING a JobPhase. It correctly uses a list of strings.
+
+# ✅ Base schema (used for both create and update)
 class JobPhaseBase(BaseModel):
     job_code: str
     contract_no: Optional[str] = None
     job_description: Optional[str] = None
+    project_engineer_id: Optional[int] = None
     project_engineer: Optional[str] = None
-    jurisdiction: Optional[str] = None
-    location_id: Optional[int] = None
-    project_engineer_id: Optional[int] = None  # 👈 new
-    project_engineer: Optional[str] = None     # 👈 keep existing
-    status: ResourceStatus = ResourceStatus.ACTIVE
+    location_id: Optional[int] = None  # ✅ replaced jurisdiction
+    status: Optional[ResourceStatus] = ResourceStatus.ACTIVE
     phase_codes: List[str] = []
-    jurisdiction: Optional[str] = None         # ✅ add this line
 
 
-
+# ✅ Schema for creating a new job phase
 class JobPhaseCreate(JobPhaseBase):
     pass
 
-#class JobPhaseUpdate(BaseModel):
 
+# ✅ Schema for updating an existing job phase
 class JobPhaseUpdate(BaseModel):
     contract_no: Optional[str] = None
     job_description: Optional[str] = None
-    project_engineer_id: Optional[int] = None  # 👈 new
-    project_engineer: Optional[str] = None     # 👈 keep existing
-    jurisdiction: Optional[str] = None
+    project_engineer_id: Optional[int] = None
+    project_engineer: Optional[str] = None
+    location_id: Optional[int] = None  # ✅ replaced jurisdiction
     status: Optional[ResourceStatus] = None
     phase_codes: Optional[List[str]] = None
 
 
+# ✅ Schema for returning data from the backend
 class JobPhase(BaseModel):
     id: int
     job_code: str
@@ -298,7 +369,7 @@ class JobPhase(BaseModel):
     job_description: Optional[str] = None
     project_engineer_id: Optional[int] = None
     project_engineer: Optional[str] = None
-    jurisdiction: Optional[str] = None
+    location_id: Optional[int] = None  # ✅ replaced jurisdiction
     status: ResourceStatus
     phase_codes: List[PhaseCode] = []
 
@@ -306,13 +377,17 @@ class JobPhase(BaseModel):
         orm_mode = True
 
 
+# ✅ Location schema
 class LocationBase(BaseModel):
     name: str
 
+
 class LocationOut(LocationBase):
     id: int
+
     class Config:
         orm_mode = True
+
 
 # ... (JobPhase response schema)
 class DumpingSiteBase(BaseModel):

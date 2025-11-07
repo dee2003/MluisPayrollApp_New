@@ -390,41 +390,27 @@ border-color: #2b7a78;
 
 
 .admin-sidebar .sidebar-header {
-    padding: 25px 15px 20px 15px;
-    gap: 12px;
+    padding: 15px 15px 10px 15px; /* Top 15px, bottom 10px */
+    gap: 8px;                     /* Reduced space between elements */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
     display: flex;
     flex-direction: column;
+    align-items: center;          /* Keep centered */
 }
 
-.admin-sidebar .sidebar-header {
-    padding: 25px 15px 20px 15px;
-    gap: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
-    display: flex;
-    flex-direction: column;
-}
-
-.admin-sidebar .sidebar-header h3 {
-    /* *** FONT SIZE INCREASED *** */
-    font-size: 1.8em; /* Increased from 1.5em to 1.8em */
+.admin-sidebar .sidebar-header h3.sidebar-title {
+    margin-top: 0;     
+    padding-bottom: 5px; 
+    font-size: 1.8em;   
     font-weight: 700; 
     text-transform: uppercase;
-    letter-spacing: 2px; /* Increased letter spacing for impact */
-    color: var(--clean-card-bg); /* Set to White */
-    padding-bottom: 8px; /* Increased padding */
-    /* Retained the strong highlight color for the underline */
+    letter-spacing: 2px;
+    color: var(--clean-card-bg);
     border-bottom: 2px solid var(--clean-highlight); 
     width: 80%;
     text-align: center;
-    margin: 0 0 5px 0;
 }
 
-.data-table td, 
-.data-table th {
-  text-align: center;
-  vertical-align: middle;
-}
 
 /* --- Center the table title --- */
 
@@ -488,13 +474,32 @@ border-color: #2b7a78;
 /* --- Actions Column Styling --- */
 /* --- Actions Column Styling (Centered) --- */
 .data-table td:last-child {
-    white-space: normal;
-    text-align: center;
-    display: flex;
-    justify-content: center;  /* Centers horizontally */
-    align-items: center;      /* Centers vertically */
-    gap: 8px;                 /* Space between buttons */
-    min-width: 150px;
+    /* Set the fixed width for the column */
+    width: 140px; 
+    
+    /* Center the content (buttons) horizontally using text-align */
+    text-align: center; 
+    
+    /* Vertically center the content (which is the default for table cells) */
+    vertical-align: middle; 
+
+    /* Remove Flexbox properties that are causing layout issues */
+    /* REMOVED: display: flex; */ 
+    /* REMOVED: justify-content: center; */
+    /* REMOVED: align-items: center; */
+    
+    /* Keep the gap, but apply it using margin/padding if needed. */
+    /* However, since you use .btn-sm, the space is usually handled well by margins or the default inline spacing. */
+    
+    /* Since we removed flex, if the buttons need a gap, they must be set as inline-block with a margin: */
+    
+    white-space: normal; /* Keep to allow the cell to behave normally */
+}
+
+/* 💡 If the buttons need space between them, add this general style for buttons inside table cells: */
+.data-table td:last-child .btn-sm {
+    margin: 0 4px; /* Add a small horizontal margin to replace the flex gap */
+    display: inline-block;
 }
 
 
@@ -640,4 +645,61 @@ border: 1px solid var(--clean-highlight);
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+
+
+/* Make sidebar take full height and scrollable */
+.admin-sidebar {
+    height: 100vh;            /* Full viewport height */
+    overflow-y: auto;         /* Vertical scroll if content overflows */
+    overflow-x: hidden;       /* No horizontal scroll */
+    position: fixed;          /* Sidebar stays fixed */
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+/* Keep header & top controls fixed */
+.sidebar-top,
+.sidebar-header {
+    flex: 0 0 auto;           /* Fixed height, no scroll */
+}
+
+/* Sidebar navigation scroll */
+.sidebar-nav {
+    flex: 1 1 auto;           /* Fill remaining space */
+    overflow-y: auto;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    scrollbar-width: thin;         /* For Firefox */
+    scrollbar-color: rgba(56,163,165,0.5) rgba(30,30,47,0.2); /* thumb + track */
+}
+
+/* Chrome, Edge, Safari */
+.sidebar-nav::-webkit-scrollbar {
+    width: 6px;                  /* Thin scrollbar */
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: rgba(30,30,47,0.2); /* Semi-transparent track */
+    border-radius: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(56,163,165,0.5); /* Teal-ish thumb */
+    border-radius: 4px;
+    border: 2px solid rgba(30,30,47,0.2); /* Small padding effect */
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(56,163,165,0.8); /* Darker on hover */
+}
+
+/* Smooth scrolling */
+.sidebar-nav {
+    scroll-behavior: smooth;
 }

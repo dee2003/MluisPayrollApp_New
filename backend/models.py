@@ -498,6 +498,34 @@ class DumpingSite(Base):
     name = Column(String, nullable=False, unique=True)
     status = Column(SQLAlchemyEnum(ResourceStatus), default=ResourceStatus.ACTIVE, nullable=False)
 
+# class JobPhase(Base):
+#     __tablename__ = "job_phases"
+
+#     id = Column(Integer, primary_key=True, index=True)
+#     job_code = Column(String, unique=True, nullable=False)
+#     contract_no = Column(String)
+#     job_description = Column(String)
+#     project_engineer = Column(String)
+#     jurisdiction = Column(String)
+#     location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"))
+#     location = relationship("Location", back_populates="job_phases")
+#     status = Column(String, default="Active")
+#     assigned_foremen = relationship("ForemanJob", back_populates="job_phase")
+#     project_engineer_id = Column(Integer, ForeignKey("users.id"))
+#     jurisdiction = Column(String, nullable=True)  # ✅ Add this line
+
+#     # ✅ Correct relationship (MUST have cascade)
+#     phase_codes = relationship(
+#         "PhaseCode",
+#         back_populates="job_phase",
+#         cascade="all, delete-orphan",
+#         lazy="selectin"
+#     )
+
+# ===============================
+#         JOB PHASE MODEL
+# ===============================
+
 class JobPhase(Base):
     __tablename__ = "job_phases"
 
@@ -505,22 +533,28 @@ class JobPhase(Base):
     job_code = Column(String, unique=True, nullable=False)
     contract_no = Column(String)
     job_description = Column(String)
-    project_engineer = Column(String)
-    jurisdiction = Column(String)
+
+    # ✅ Project Engineer info
+    project_engineer_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+    project_engineer = Column(String, nullable=True)
+
+    # ✅ Replace old jurisdiction field with location_id
     location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"))
     location = relationship("Location", back_populates="job_phases")
-    status = Column(String, default="Active")
-    assigned_foremen = relationship("ForemanJob", back_populates="job_phase")
-    project_engineer_id = Column(Integer, ForeignKey("users.id"))
-    jurisdiction = Column(String, nullable=True)  # ✅ Add this line
 
-    # ✅ Correct relationship (MUST have cascade)
+    # ✅ Status of job
+    status = Column(String, default="active")
+
+    # ✅ Phases and relationships
     phase_codes = relationship(
         "PhaseCode",
         back_populates="job_phase",
         cascade="all, delete-orphan",
         lazy="selectin"
     )
+
+    # ✅ Example if foreman jobs are linked
+    assigned_foremen = relationship("ForemanJob", back_populates="job_phase")
 
 
 class PhaseCode(Base):

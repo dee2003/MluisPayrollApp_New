@@ -7,6 +7,7 @@ import "./CrewMapping.css";
 import { FaUser, FaHardHat, FaTasks, FaBox, FaBriefcase, FaUsers, FaTrash, FaBars, FaTimes,FaTachometerAlt  } from 'react-icons/fa';
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import TimesheetCounts from './TimesheetCounts';
+import './Equipment.css'; // 1. Import the new CSS file
 
 const API_URL = "http://127.0.0.1:8000/api";
 const ITEMSPERPAGE = 2; // You can change 10 to any number you like
@@ -218,7 +219,6 @@ const handleSubmit = e => {
   setErrors(newErrors);
 
   if (Object.keys(newErrors).length === 0) {
-    // Ensure category name is updated correctly before submitting
     if (values.category_number && !values.category) {
       const selectedCategory = categories.find(c => c.number === values.category_number);
       if (selectedCategory) {
@@ -226,175 +226,19 @@ const handleSubmit = e => {
       }
     }
 
-    // Add category_id based on category_number for backend
     if (values.category_number) {
       const selectedCategory = categories.find(c => c.number === values.category_number);
       if (selectedCategory) {
         values.category_id = selectedCategory.id;
       }
     }
-    // if (!values.id || values.id.trim() === "") {
-    //   alert("Please enter Equipment ID before submitting.");
-    //   return;
-    // }
+
     console.log("Submitting form values:", values);
     values.materials = vendorData.materials;
     onSubmit(values);
   }
 };
 
-
-// return (
-//     <form onSubmit={handleSubmit}>
-//         {genericErrorMessage && <div className="form-error-top">{genericErrorMessage}</div>}
-        
-//         {fields.map(field => (
-//             <div className="form-group" key={field.name}>
-//                 <label className="form-label">
-//                     {field.label}
-//                     {field.required && <span style={{ color: 'red' }}> *</span>}
-//                 </label>
-
-//                 {/* This wrapper aligns the input and the "Add New" button side-by-side */}
-//                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-
-//                     {/* This div makes the input/select take up the available space */}
-//                     <div style={{ flex: 1 }}>
-//                         {field.type === "select" ? (
-//                             <select name={field.name} className="form-control" value={values[field.name] || ""} onChange={handleChange}>
-//                                 {field.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-//                             </select>
-//                         ) : (
-//                             <input
-//                                 type={field.type || "text"}
-                             
-//                                 name={field.name}
-//                                 className="form-control"
-//                                 value={values[field.name] || ""}
-//                                 onChange={handleChange}
-//                                 required={field.required}
-//                                 readOnly={field.readOnly || false}
-
-//                                 autoComplete={field.type === "password" ? "new-password" : "off"}
-//                             />
-//                         )}
-//                     </div>
-
-//                     {/* --- CHANGE IS HERE --- */}
-//                     {/* This code checks if a field should have an "Add New" button and renders it */}
-//                     {field.onAddNew && (
-//                         <button
-//                             type="button"
-//                             onClick={field.onAddNew}
-//                             className="btn btn-sm btn-outline"
-//                             style={{ whiteSpace: 'nowrap' }} // Keeps "Add New" on one line
-//                         >
-//                             Add New
-//                         </button>
-//                     )}
-//                     {/* --- END OF CHANGE --- */}
-
-//                 </div>
-
-//                 {errors[field.name] && <small style={{ color: 'red', fontSize: '12px' }}>{errors[field.name]}</small>}
-//             </div>
-//         ))}
-        
-//         <div className="modal-actions">
-//             <button type="submit" className="btn btn-primary">Save</button>
-//         </div>
-//     </form>
-//     return (
-//   <form onSubmit={handleSubmit} className="generic-form">
-//     {errorMessage && (
-//       <div className="form-error-top">{errorMessage}</div>
-//     )}
-
-//     {fields.map((field, index) => {
-//       if (field.type === "multi_material") {
-//         console.log("Material options:", vendorOptions.material);
-
-//   return (
-    
-//     <MultiSelectWithAdd
-//       key={index}
-//       label={field.label}
-//       options={vendorOptions.material || []}
-
-//       value={values.material_ids || []}
-//       onChange={(selected) => setValues(prev => ({ ...prev, material_ids: selected }))}
-//       reloadOptions={fetchVendorOptions}
-//     />
-//   );
-// }
-
-  
-//   if (field.type === "custom") {
-//   return (
-//     <SelectWithAdd
-//       key={index}
-//       label={field.label}
-//       type={field.customType}
-//       options={(vendorOptions?.[field.customType] || []).map(v => ({ value: v, label: v }))}
-//       value={values[field.name] || ""}
-//       onChange={(e) => setValues(prev => ({ ...prev, [field.name]: e.target.value }))}
-//       reloadOptions={fetchVendorOptions}
-//     />
-//   );
-// }
-
-//       // 🧩 Regular select or input
-//       return (
-//         <div className="form-group" key={field.name}>
-//           <label className="form-label">{field.label}</label>
-
-//           {field.type === "select" ? (
-//             <select
-//               name={field.name}
-//               className="form-control"
-//               value={values[field.name] || ""}
-//               onChange={handleChange}
-//               required={field.required}
-              
-//             >
-//               <option value="">Select {field.label}</option>
-//               {field.options.map((opt) => (
-//                 <option key={opt.value} value={opt.value}>
-//                   {opt.label}
-//                 </option>
-//               ))}
-//             </select>
-//           ) : (
-//             <input
-//               type={field.type || "text"}
-//               name={field.name}
-//               className="form-control"
-//               value={values[field.name] || ""}
-//               onChange={handleChange}
-//               required={field.required}
-//               readOnly={field.readOnly || false}
-//               autoComplete={field.type === "password" ? "new-password" : "off"}
-//             />
-//           )}
-
-//           {errors[field.name] && (
-//             <small style={{ color: "red", fontSize: "12px" }}>
-//               {errors[field.name]}
-//             </small>
-//           )}
-//         </div>
-//       );
-//     })}
-
-//     <div className="modal-actions">
-//       <button type="submit" className="btn btn-primary">
-//         Save
-//       </button>
-//     </div>
-//   </form>
-// );
-
-// };
 return (
   <form onSubmit={handleSubmit} className="generic-form">
     {/* Top error message */}
@@ -532,8 +376,13 @@ const JobWithPhasesModal = ({ mode, job, onSave, onClose, showNotification }) =>
     const [jobCode, setJobCode] = useState(job?.job_code || "");
     const [contractNo, setContractNo] = useState(job?.contract_no || "");
     const [jobDescription, setJobDescription] = useState(job?.job_description || "");
-    const [projectEngineer, setProjectEngineer] = useState(job?.project_engineer || "");
-    const [jurisdiction, setJurisdiction] = useState(job?.jurisdiction || "");
+const [projectEngineer, setProjectEngineer] = useState(
+  job?.project_engineer_id || job?.project_engineer || ""
+);
+
+const [jurisdiction, setJurisdiction] = useState("");
+
+
 const [projectEngineerId, setProjectEngineerId] = useState('');
 
 
@@ -546,6 +395,8 @@ const [projectEngineerId, setProjectEngineerId] = useState('');
     const fixedPhases = ["Admin", "S&SL", "Vacation"];
     const [locations, setLocations] = useState([]);
  const [engineers, setEngineers] = useState([]);
+const [locationId, setLocationId] = useState("");
+
 
 
 
@@ -579,7 +430,57 @@ useEffect(() => {
       .then((res) => setLocations(res.data))
       .catch((err) => console.error("Error fetching locations:", err));
   }, []);
-  
+
+// ✅ Prefill form when editing a job
+useEffect(() => {
+  if (job) {
+    setJobCode(job.job_code || "");
+    setContractNo(job.contract_no || "");
+    setJobDescription(job.job_description || "");
+    setProjectEngineerId(job.project_engineer_id || "");
+    setProjectEngineer(job.project_engineer || "");
+    setStatus(job.status?.toLowerCase() || "active");
+
+    // ✅ Handle location (jurisdiction/location_id)
+    if (job.location_id) {
+      setLocationId(String(job.location_id));
+    } else if (typeof job.jurisdiction === "string") {
+      const match = locations.find(
+        (loc) =>
+          loc.name.trim().toLowerCase() ===
+          job.jurisdiction.trim().toLowerCase()
+      );
+      if (match) setLocationId(String(match.id));
+    }
+  }
+}, [job, locations]);
+
+
+useEffect(() => {
+  if (!job || locations.length === 0) return;
+
+  let matchedId = null;
+
+  if (job.location_id) {
+    matchedId = job.location_id;
+  } else if (typeof job.jurisdiction === "string") {
+    const match = locations.find(
+      (loc) =>
+        loc.name.trim().toLowerCase() ===
+        job.jurisdiction.trim().toLowerCase()
+    );
+    if (match) matchedId = match.id;
+  }
+
+  if (matchedId) {
+    setJurisdiction(String(matchedId));
+  }
+
+  console.log("🔍 Job:", job);
+  console.log("📍 Locations:", locations);
+  console.log("✅ Matched Jurisdiction ID:", matchedId);
+}, [job, locations]);
+
     // ... (Your handleAddPhase, handleEditPhase, handleDeletePhase functions remain the same)
     const handleAddPhase = () => {
       if (!phaseCode.trim()) return showNotification("Please enter a phase code.");
@@ -611,16 +512,17 @@ useEffect(() => {
         const finalPhaseStrings = [...new Set([...phases.map(p => p.phase_code), ...fixedPhases])];
 
         // ✅ FIX: Construct the payload with the EXACT field names the backend expects
-        const payload = {
-            job_code: jobCode.trim(),
-            contract_no: contractNo.trim(),
-            job_description: jobDescription.trim(),
-            project_engineer: projectEngineer.trim(),
-            location_id: jurisdiction ? parseInt(jurisdiction) : null,
-            project_engineer_id: projectEngineerId,  // id
-            status: status, // This is now guaranteed to be lowercase
-            phase_codes: finalPhaseStrings // The key is now 'phase_codes'
-        };
+const payload = {
+  job_code: jobCode.trim(),
+  contract_no: contractNo.trim(),
+  job_description: jobDescription.trim(),
+  project_engineer_id: projectEngineerId ? parseInt(projectEngineerId) : null,
+  location_id: jurisdiction ? parseInt(jurisdiction) : null,
+  project_engineer: projectEngineer, // keep name if your backend uses both
+  status: status.toLowerCase(),
+  phase_codes: finalPhaseStrings
+};
+
         
         onSave(payload);
     };
@@ -632,21 +534,23 @@ useEffect(() => {
                 <div className="form-group"><label>Contract No.</label><input type="text" value={contractNo} onChange={(e) => setContractNo(e.target.value)} className="form-control" /></div>
                 {/* <div className="form-group"><label>Project Engineer</label><input type="text" value={projectEngineer} onChange={(e) => setProjectEngineer(e.target.value)} className="form-control" /></div> */}
                 {/* <div className="form-group"><label>Jurisdiction</label><input type="text" value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} className="form-control" /></div> */}
-                <div className="form-group">
-        <label>Jurisdiction</label>
-        <select
-          value={jurisdiction}
-          onChange={(e) => setJurisdiction(e.target.value)}
-          className="form-control"
-        >
-          <option value="">Select Jurisdiction</option>
-          {locations.map((loc) => (
-            <option key={loc.id} value={loc.id}>
-              {loc.name}
-            </option>
-          ))}
-        </select>
-      </div>
+<div className="form-group">
+  <label>Location</label>
+<select
+  value={locationId || ""}  // <-- must be locationId, not jurisdiction
+  onChange={(e) => setLocationId(Number(e.target.value))}
+  className="form-control"
+>
+    <option value="">Select Location</option>
+    {locations.map((loc) => (
+      <option key={loc.id} value={loc.id}>
+        {loc.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+
 <div className="form-group">
   <label>Project Engineer</label>
  <select
@@ -946,7 +850,7 @@ const AdminDashboard = ({ data: initialData, onLogout }) => {
         return { ...defaults, ...(initialData || {}) };
     });
 
-    const [activeSection, setActiveSection] = useState("users");
+const [activeSection, setActiveSection] = useState('dashboard');
     const [modal, setModal] = useState({ shown: false, type: "", title: "", mode: "add", item: null });
     const [jobModal, setJobModal] = useState({ shown: false, mode: "", job: null });
     const [viewPhasesJob, setViewPhasesJob] = useState(null);
@@ -1155,7 +1059,15 @@ useEffect(() => {
         };
     }, [isResizing]);
 
-    const typeToStateKey = { user: "users", employee: "employees", equipment: "equipment", job_phase: "job-phases", material: "materials", vendor: "vendors", dumping_site: "dumping_sites" };
+const typeToStateKey = {
+  user: "users",
+  employee: "employees",
+  equipment: "equipment",
+  job_phase: "job_phases",   // <-- use underscore, matches your state
+  material: "materials",
+  vendor: "vendors",
+  dumping_site: "dumping_sites",
+};
 
     const onUpdate = (key, newList) => setData(prev => ({ ...prev, [key]: newList }));
 
@@ -1206,23 +1118,37 @@ const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) 
   try {
     // ----------------------------
     // 1. TYPE-SPECIFIC PAYLOAD PREPARATION
-    // ----------------------------
-    if (type === "vendor") {
-      const baseUrl = "http://localhost:8000/api/vendors/";
+if (type === "vendor") {
+  const baseUrl = "http://localhost:8000/api/vendors/";
+  let response;
 
-      let response;
-      if (mode === "add") {
-        response = await axios.post(baseUrl, formData);
-        alert("Vendor added successfully");
-      } else {
-        response = await axios.put(`${baseUrl}${existingItem.id}/`, formData);
-        alert("Vendor updated successfully");
-      }
+  if (mode === "add") {
+    response = await axios.post(baseUrl, formData);
+    alert("Vendor added successfully");
 
-      if (typeof fetchVendorOptions === "function") await fetchVendorOptions();
-      closeMainModal();
-      return; // Stop further execution
-    }
+    // ✅ Immediately update UI without refresh
+    setData(prev => ({
+      ...prev,
+      vendors: [response.data, ...(prev.vendors || [])],
+    }));
+  } else {
+    response = await axios.put(`${baseUrl}${existingItem.id}/`, formData);
+    alert("Vendor updated successfully");
+
+    // ✅ Update existing vendor in list
+    setData(prev => ({
+      ...prev,
+      vendors: (prev.vendors || []).map(v =>
+        v.id === existingItem.id ? response.data : v
+      ),
+    }));
+  }
+
+  if (typeof fetchVendorOptions === "function") await fetchVendorOptions();
+  closeMainModal();
+  return;
+}
+
 
     if (type === 'equipment') {
       // Validation
@@ -1328,235 +1254,63 @@ const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) 
   }
 };
 
-
-
-// const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) => {
-//     const stateKey = typeToStateKey[type];
-//     setFormError('');
-//     setFieldErrors({});
-
-//     // This is the raw data from your form
-//     const formData = { ...itemData };
-
-//     // This will hold the final, clean data to be sent to the backend
-//     let payload;
-
-//     // --- START: TYPE-SPECIFIC PAYLOAD PREPARATION ---
-// try {
-//     let response;
-//     const cleanData = { ...itemData };
-//      if (type === "vendor") {
-//   const baseUrl = "http://localhost:8000/api/vendors/";
-
-//   if (mode === "add") {
-//     response = await axios.post(baseUrl, cleanData);
-//     alert("Vendor added successfully");
-//   } else {
-//     response = await axios.put(`${baseUrl}${existingItem.id}/`, cleanData);
-//     alert("Vendor updated successfully");
-//   }
-
-//   // Optional: refresh vendor list
-//   if (typeof fetchVendorOptions  === "function") await fetchVendorOptions ();
-  
-//   closeMainModal();
-//   return; // stop further execution here
-// }
-
-//     if (type === 'equipment') {
-//         // 1. For 'equipment', we manually construct the payload
-//         //    to match the backend's snake_case schema.
-
-//         // Client-side validation before constructing the payload
-//         if (!formData.id || formData.id.trim() === '') {
-//             setFieldErrors({ id: 'Equipment ID is a required field.' });
-//             return;
-//         }
-//         if (!formData.departmentId) {
-//             setFieldErrors({ departmentId: 'Department is required.' });
-//             return;
-//         }
-//         if (!formData.categoryid) {
-//             setFieldErrors({ categorynumber: 'Category Number is required.' });
-//             return;
-//         }
-
-//         // Build the payload with the exact field names and types the backend expects
-//         payload = {
-//             id: formData.id,
-//             name: formData.name,
-//             department_id: parseInt(formData.departmentId, 10),
-//             category_id: parseInt(formData.categoryid, 10),
-//             vin_number: formData.vinnumber || null,
-//             status: (formData.status || 'Active').toLowerCase()
-//         };
-
-//     } else if (['user', 'dumpingsite'].includes(type)) {
-//         // 2. For 'user' and 'dumpingsite', the primary task is converting their ID to a number.
-
-//         if (formData.id) {
-//             const numericId = parseInt(formData.id, 10);
-//             if (isNaN(numericId)) {
-//                 setFieldErrors({ id: 'ID must be a valid number.' });
-//                 return;
-//             }
-//             formData.id = numericId; // Update the ID in the formData object
-//         }
-//         payload = { ...formData }; // The rest of the fields are correct
-
-//     } else {
-//         // 3. For 'employee' and all other types, the form data is already in the correct format.
-//         payload = { ...formData };
-//     }
-//     closeMainModal();
-// } 
-// catch (error) {
-//     const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : "An unexpected error occurred.";
-//     setFormError(`Error: ${errorMessage}`);
-//   }
-
-// };
-
-//     // Normalize status to lowercase if it exists in the final payload
-//     if (payload.status) {
-//         payload.status = payload.status.toLowerCase();
-//     }
-
-//     // --- END: PAYLOAD PREPARATION ---
-
-
-//     // --- Client-side duplicate checks ---
-//     if (mode === 'add') {
-//         const newErrors = {};
-//         if (type === 'equipment' && data.equipment.some(equip => equip.id === payload.id)) {
-//             newErrors.id = 'Equipment ID already exists.';
-//         } else if (type === 'user' && data.users.some(user => user.id === payload.id)) {
-//             newErrors.id = 'User ID already exists.';
-//         } else if (type === 'employee' && data.employees.some(emp => emp.id === payload.id)) {
-//             newErrors.id = 'Employee ID already exists.';
-//         } // ... etc.
-
-//         if (Object.keys(newErrors).length > 0) {
-//             setFieldErrors(newErrors);
-//             return;
-//         }
-//     }
-
-
-//     try {
-//         let response;
-//         if (mode === "edit" && existingItem) {
-//             const itemId = existingItem.id;
-//             response = await axios.put(`${API_URL}/${stateKey}/${encodeURIComponent(itemId)}`, payload);
-//             onUpdate(stateKey, (data[stateKey] || []).map(it => it.id === itemId ? response.data : it));
-//         } else {
-//             response = await axios.post(`${API_URL}/${stateKey}/`, payload);
-//             onUpdate(stateKey, [response.data, ...(data[stateKey] || [])]);
-//         }
-//         closeMainModal();
-//     } catch (error) {
-//         // Your existing, excellent error handling logic remains here
-//         const errorData = error.response?.data?.detail;
-//         if (error.response?.status === 422 && errorData) {
-//             const newErrors = {};
-//             if (Array.isArray(errorData)) {
-//                 errorData.forEach(err => {
-//                     if (err.loc && err.loc.length > 1) {
-//                         const backendField = err.loc[1];
-//                         const frontendField = {
-//                             'department_id': 'departmentId',
-//                             'category_id': 'categoryid'
-//                         }[backendField] || backendField;
-//                         newErrors[frontendField] = err.msg;
-//                     }
-//                 });
-//             }
-//             setFieldErrors(newErrors);
-//         } else {
-//             setFormError('An unexpected error occurred.');
-//         }
-//         console.error(`Error processing ${type}:`, error);
-//     }
-// };
-
-// const handleToggleStatus = async (type, item, newStatus) => {
-//   const stateKey = typeToStateKey[type];
-//   const updatedItem = { ...item, status: newStatus.toLowerCase() };
-
-//   // Remove nested relational fields before sending
-//   const { category_rel, department_rel, ...cleanPayload } = updatedItem;
-
-//   console.log(`Changing status for ${type} id:${item.id}`, cleanPayload);
-
-//   try {
-//     const response = await axios.put(
-//       `${API_URL}/${stateKey}/${encodeURIComponent(item.id)}`,
-//       cleanPayload
-//     );
-
-//     // Update UI immediately
-//     setData((prev) => ({
-//       ...prev,
-//       [stateKey]: (prev[stateKey] || []).map((it) =>
-//         it.id === item.id ? response.data : it
-//       ),
-//     }));
-//   } catch (error) {
-//     console.error("Error updating status:", error);
-//     alert(
-//       `Error updating status: ${
-//         error.response?.data
-//           ? JSON.stringify(error.response.data)
-//           : "Unexpected error"
-//       }`
-//     );
-//   }
-// };
-
-// In AdminDashboard.js
-
 const handleToggleStatus = async (type, item, newStatus) => {
-    const stateKey = typeToStateKey[type];
-    if (!stateKey) {
-        console.error("Could not find a state key for type:", type);
-        return;
+  const stateKey = typeToStateKey[type];
+  if (!stateKey) {
+    console.error("Could not find a state key for type:", type);
+    return;
+  }
+
+  const payload = { status: newStatus.toLowerCase() };
+  const oldStatus = item.status;
+
+  // Optimistic update: immediately reflect change in UI
+  setData(prev => {
+    const currentList = prev[stateKey] || [];
+    const updatedList = currentList.map(it =>
+      it.id === item.id ? { ...it, status: payload.status } : it
+    );
+    return { ...prev, [stateKey]: updatedList };
+  });
+
+  try {
+    // Determine correct endpoint
+    const resourcePath = type.toLowerCase().includes('job') ? 'job-phases/by-id' : stateKey;
+const endpoint = `${API_URL}/${resourcePath}/${encodeURIComponent(item.id)}/`;
+const method = type === "vendor" ? axios.patch : axios.put; // ✅ PATCH for vendor
+
+    // Send PUT request to backend
+const response = await method(endpoint, payload);
+
+    // Ensure frontend state matches backend response
+    setData(prev => {
+      const currentList = prev[stateKey] || [];
+      const updatedList = currentList.map(it =>
+        it.id === item.id ? response.data : it
+      );
+      return { ...prev, [stateKey]: updatedList };
+    });
+
+    // Reset pagination if setting inactive
+    if (newStatus.toLowerCase() === 'inactive') {
+      setPagination(prev => ({ ...prev, [stateKey]: 1 }));
     }
+  } catch (error) {
+    // Revert state on error
+    setData(prev => {
+      const currentList = prev[stateKey] || [];
+      const revertedList = currentList.map(it =>
+        it.id === item.id ? { ...it, status: oldStatus } : it
+      );
+      return { ...prev, [stateKey]: revertedList };
+    });
 
-    const payload = { status: newStatus.toLowerCase() };
-    const isJob = type === 'jobphase';
-    const idKey = 'id';
-    const itemId = item[idKey];
-
-const resourcePath =
-  type.toLowerCase().includes('job') ? 'job-phases/by-id' : stateKey;
-const endpoint = `${API_URL}/${resourcePath}/${encodeURIComponent(item.id)}`;
-
-
-
-    console.log("🔗 PUT request to:", endpoint);
-
-    try {
-const response = await axios.put(endpoint, payload);
-setData(prev => {
-  const currentList = prev[stateKey] || [];
-  const updatedList = currentList.map(it => it.id === item.id ? response.data : it);
-  return { ...prev, [stateKey]: updatedList };
-});
-
-
-
-        if (newStatus.toLowerCase() === 'inactive') {
-            setPagination(prev => ({ ...prev, [stateKey]: 1 }));
-        }
-
-    } catch (error) {
-        const errorDetail = error.response?.data?.detail;
-        const errorMessage = errorDetail ? JSON.stringify(errorDetail) : 'An unexpected error occurred.';
-        console.error(`Error updating status for ${type}:`, error);
-        alert(`Error updating status: ${errorMessage}`);
-    }
+    const errorDetail = error.response?.data?.detail;
+    const errorMessage = errorDetail ? JSON.stringify(errorDetail) : 'An unexpected error occurred.';
+    console.error(`Error updating status for ${type}:`, error);
+    alert(`Error updating status: ${errorMessage}`);
+  }
 };
-
 
     const handleDeleteItem = async (type, itemId) => {
         const deleteAction = async () => {
@@ -1819,46 +1573,104 @@ const makeTableWithPagination = (type, title, headers, rowRender, extra = null) 
         handlePaginate(key, 1, totalPages);
     }
 
-    return (
-        <div>
-            <DataTableSection
-                title={title}
-                headers={headers}
-                // --- FIX #3: Pass the correctly filtered and paginated data ---
-                data={pagedData}
-                renderRow={(item) => <>{rowRender(item)}</>}
-                // onAdd={() => setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })}
-                // onEdit={item => setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })}
-                // onDelete={id => handleDeleteItem(type, id)}
-                // handleToggleStatus={handleToggleStatus}
-                // activeSection={type}
-                onAdd={() =>
-                    isExtraObject && extra.onAdd
-                        ? extra.onAdd()
-                        : setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })
-                }
-                onEdit={(item) =>
-                    isExtraObject && extra.onEdit
-                        ? extra.onEdit(item)
-                        : setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })
-                }
-                onDelete={(id) =>
-                    isExtraObject && extra.onDelete
-                        ? extra.onDelete(id)
-                        : handleDeleteItem(type, id)
-                }
-                 extraActions={isExtraObject ? extra.extraActions : undefined}
-                handleToggleStatus={isExtraObject && extra.handleToggleStatus ? extra.handleToggleStatus : handleToggleStatus}
-                activeSection={isExtraObject && extra.activeSection ? extra.activeSection : type}
-            />
+//     return (
+//         <div>
+//             <DataTableSection
+//                 title={title}
+//                 headers={headers}
+//                 // --- FIX #3: Pass the correctly filtered and paginated data ---
+//                 data={pagedData}
+//                 renderRow={(item) => <>{rowRender(item)}</>}
+//                 // onAdd={() => setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })}
+//                 // onEdit={item => setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })}
+//                 // onDelete={id => handleDeleteItem(type, id)}
+//                 // handleToggleStatus={handleToggleStatus}
+//                 // activeSection={type}
+//                 onAdd={() =>
+//                     isExtraObject && extra.onAdd
+//                         ? extra.onAdd()
+//                         : setModal({ shown: true, type, title: `Add ${label}`, mode: "add", item: null })
+//                 }
+//                 onEdit={(item) =>
+//                     isExtraObject && extra.onEdit
+//                         ? extra.onEdit(item)
+//                         : setModal({ shown: true, type, title: `Edit ${label}`, mode: "edit", item })
+//                 }
+//                 onDelete={(id) =>
+//                     isExtraObject && extra.onDelete
+//                         ? extra.onDelete(id)
+//                         : handleDeleteItem(type, id)
+//                 }
+//                  extraActions={isExtraObject ? extra.extraActions : undefined}
+//                 handleToggleStatus={isExtraObject && extra.handleToggleStatus ? extra.handleToggleStatus : handleToggleStatus}
+//                 activeSection={isExtraObject && extra.activeSection ? extra.activeSection : type}
+//             />
             
-            <PaginationControls
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPaginate={pageNum => handlePaginate(key, pageNum, totalPages)}
-            />
-        </div>
-    );
+//             <PaginationControls
+//                 currentPage={currentPage}
+//                 totalPages={totalPages}
+//                 onPaginate={pageNum => handlePaginate(key, pageNum, totalPages)}
+//             />
+//         </div>
+//     );
+// };
+return (
+  <div>
+    <DataTableSection
+      title={title}
+      headers={headers}
+      data={pagedData}
+      renderRow={(item) => <>{rowRender(item)}</>}
+      onAdd={() =>
+        isExtraObject && extra.onAdd
+          ? extra.onAdd()
+          : setModal({
+              shown: true,
+              type,
+              title: `Add ${label}`,
+              mode: "add",
+              item: null,
+            })
+      }
+      onEdit={(item) =>
+        isExtraObject && extra.onEdit
+          ? extra.onEdit(item)
+          : setModal({
+              shown: true,
+              type,
+              title: `Edit ${label}`,
+              mode: "edit",
+              item,
+            })
+      }
+      onDelete={(id) =>
+        isExtraObject && extra.onDelete
+          ? extra.onDelete(id)
+          : handleDeleteItem(type, id)
+      }
+      extraActions={isExtraObject ? extra.extraActions : undefined}
+      /** ✅ Un-comment and keep these two props */
+      handleToggleStatus={
+        isExtraObject && extra.handleToggleStatus
+          ? extra.handleToggleStatus
+          : handleToggleStatus
+      }
+      activeSection={
+        isExtraObject && extra.activeSection
+          ? extra.activeSection
+          : type
+      }
+    />
+
+    <PaginationControls
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onPaginate={(pageNum) =>
+        handlePaginate(key, pageNum, totalPages)
+      }
+    />
+  </div>
+);
 };
 
         switch (activeSection) {
@@ -1907,39 +1719,33 @@ const makeTableWithPagination = (type, title, headers, rowRender, extra = null) 
                 });
 // Inside the renderSection function...
 // In AdminDashboard.js, inside renderSection...
-case "equipment": 
-    return makeTableWithPagination(
-        "equipment", 
-        "Equipment Management", 
-        ["ID", "Name", "Category Name", "Department", "Category No.", "VIN No.", "Status"], 
-        e => {
-            console.log("Equipment row", e.category_rel, e.department_rel);
-            return (
-                <> 
-                    <td key={e.id}>{e.id}</td>
-                    <td key={e.name}>{e.name}</td>
-                    <td>{e.category_rel?.name || "N/A"}</td>
-                    <td>{e.department_rel?.name || "N/A"}</td>
-                    <td>{e.category_rel?.number || "N/A"}</td>
-                    <td key={e.vin_number}>{e.vin_number}</td>
-                    {/* <td key={e.status}>{capitalizeFirstLetter(e.status)}</td> */}
-                    <td>
-  {(() => {
-    const statusMap = {
-      active: "Active",
-      inactive: "Inactive",
-      maintenance: "In Maintenance",
-      on_leave: "On Leave",
-    };
-    return statusMap[e.status?.toLowerCase()] || e.status;
-  })()}
-</td>
-
-                </>
-            );
-        }
-    );
-
+case "equipment":
+  return makeTableWithPagination(
+    "equipment",
+    "Equipment Management",
+    ["ID", "Name", "Category Name", "Department", "Category No.", "VIN No.", "Status"],
+    e => (
+      <>
+        <td key={e.id}>{e.id}</td>
+        <td key={e.name} className="expandable" title={e.name}>{e.name}</td>
+        <td>{e.category_rel?.name || "N/A"}</td>
+        <td>{e.department_rel?.name || "N/A"}</td>
+        <td>{e.category_rel?.number || "N/A"}</td>
+        <td key={e.vin_number}>{e.vin_number}</td>
+        <td>
+          {(() => {
+            const statusMap = {
+              active: "Active",
+              inactive: "Inactive",
+              maintenance: "In Maintenance",
+              on_leave: "On Leave",
+            };
+            return statusMap[e.status?.toLowerCase()] || e.status;
+          })()}
+        </td>
+      </>
+    )
+  );
 
 
 
@@ -1969,26 +1775,23 @@ case "equipment":
     ),
     "Vendors"
   );
-
-
-
-
-
-
-
-
-
-
-
             case "materials": 
                 return makeTableWithPagination("material", "Materials and Trucking", ["Name", "Status"], m => <><td key={m.name}>{m.name}</td><td key={m.status}>{capitalizeFirstLetter(m.status)}</td>
 </>, "Material and Trucking");
 case "job-phases":
+  // Filter only active and on_hold jobs
+  const filteredJobs = (data.job_phases || []).filter(
+    job => {
+      const status = job.status?.toLowerCase();
+      return status === "active" || status === "on_hold";
+    }
+  );
+
   return (
     <DataTableSection 
       title="Jobs & Phases Management" 
       headers={["Job Code", "Description", "Project Engineer", "Status"]} 
-      data={data.job_phases || []} 
+      data={filteredJobs}  // Pass filtered data here
       renderRow={job => (
         <>
           <td>{job.job_code}</td> 
@@ -1998,9 +1801,8 @@ case "job-phases":
             {(() => {
               const statusMap = {
                 active: "Active",
-                inactive: "Complete",
+                inactive: "Complete", // Won’t appear here because filtered out
                 on_hold: "On Hold",
-                // complete: "Complete",
               };
               return statusMap[job.status?.toLowerCase()] || job.status;
             })()}
@@ -2126,55 +1928,51 @@ const addMaterialRow = () => {
                     )}
                 </div>
 
-                <ul className="sidebar-nav">
-                    {[
-                        'dashboard',
-                        "users",
-                        "employees",
-                        "equipment",
-                        "job-phases",
-                        "materials",
-                        "vendors",
-                        "dumping_sites",
-                        "crewMapping",
-                    ].map((sec) => (
-                        <li key={sec}>
-                            <button
-                                onClick={() => setActiveSection(sec)}
-                                className={activeSection === sec ? "active" : ""}
-                            >
-                                <span className="icon">{getIconForSection(sec)}</span>
-                                {!sidebarCollapsed && (
-                                    <span className="label">
-                                         {sec === "dashboard" // <= ADD THIS CONDITION
-        ? "Dashboard"
-        : sec === "job-phases"
-        ? "Jobs & Phases"
-                                            : sec === "crewMapping"
-                                            ? "Crew Mapping"
-                                            : sec === "vendors"
-                                            ? "Work Performed"
-                                            : sec === "materials"
-                                            ? "Materials & Trucking"
-                                            : sec === "dumping_sites"
-                                            ? "Dumping Sites"
-                                            : sec.charAt(0).toUpperCase() + sec.slice(1)}
-                                    </span>
-                                )}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
+<ul className="sidebar-nav">
+  {[
+    'dashboard',
+    "users",
+    "employees",
+    "equipment",
+    "job-phases",
+    "materials",
+    "vendors",
+    "dumping_sites",
+    "crewMapping",
+  ].map((sec) => (
+    <li key={sec}>
+      <button
+        onClick={() => setActiveSection(sec)}
+        className={activeSection === sec ? "active" : ""}
+      >
+        <span className="icon">{getIconForSection(sec)}</span>
+        {!sidebarCollapsed && (
+          <span className="label">
+            {sec === "dashboard" ? "Dashboard" :
+             sec === "job-phases" ? "Jobs & Phases" :
+             sec === "crewMapping" ? "Crew Mapping" :
+             sec === "vendors" ? "Work Performed" :
+             sec === "materials" ? "Materials & Trucking" :
+             sec === "dumping_sites" ? "Dumping Sites" :
+             sec.charAt(0).toUpperCase() + sec.slice(1)}
+          </span>
+        )}
+      </button>
+    </li>
+  ))}
+</ul>
+
 
                 {!sidebarCollapsed && (<div className="sidebar-resizer" onMouseDown={() => setIsResizing(true)}/>)}
             </nav>
             
-            <main
-                className="admin-content"
-                style={{ marginLeft: sidebarCollapsed ? 60 : sidebarWidth -220 }}
-            >
-                {renderSection()}
-            </main>
+<main
+    className="admin-content"
+    style={{ marginLeft: sidebarCollapsed ? 60 : sidebarWidth }}
+>
+    {renderSection()}
+</main>
+
         </div>
     );
 };
@@ -2196,7 +1994,7 @@ const getStatusOptions = (type) => {
 const DataTableSection = ({ title, headers, data = [], renderRow, onDelete, onAdd, onEdit, extraActions, handleToggleStatus, activeSection }) => (
     <div className="data-table-container">
         <div className="section-header"><h2>{title}</h2>{onAdd && <button onClick={onAdd} className="btn btn-primary">Add New</button>}</div>
-        <table className="data-table">
+<table className={`data-table ${title.includes("Equipment") ? "equipment-table" : ""}`}>
             <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}<th>Actions</th></tr></thead>
             <tbody>
                 {data.map(item => (
@@ -2208,9 +2006,9 @@ const DataTableSection = ({ title, headers, data = [], renderRow, onDelete, onAd
         <>
             {console.log("Status dropdown type:", activeSection)} 
             <select
-                value={
+value={
   item.status?.toLowerCase() === "inactive" && activeSection === "job_phase"
-    ? "complete" // 👈 display Complete when backend sends inactive
+    ? "complete"
     : item.status?.toLowerCase() || "active"
 }
 
