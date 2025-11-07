@@ -146,54 +146,47 @@ class CategoryCreate(BaseModel):
 # ===============================
 #         MATERIALS
 # ===============================
-class MaterialBase(BaseModel):
+class MaterialTruckingBase(BaseModel):
+    id: int
     name: str
-    status: Optional[str] = "Active"
+    material_type: Optional[str] = None
+    material_category: Optional[str] = None
+    status: Optional[str]
+    material_ids: Optional[List[int]] = []
 
-class MaterialCreate(MaterialBase): 
+class MaterialTruckingCreate(MaterialTruckingBase):
     pass
 
-class Material(MaterialBase):
-    id: int
-    model_config = model_config
+class MaterialTruckingUpdate(MaterialTruckingBase):
+    pass
 
+class MaterialInfo(BaseModel):
+    id: int
+    material: str
+    unit: Optional[str]
+
+    class Config:
+        orm_mode = True
+class MaterialTruckingRead(BaseModel):
+    id: int
+    name: str
+    material_type: Optional[str]
+    material_category: Optional[str]
+    status: Optional[str]
+    materials: List[MaterialInfo] = []  # each material has id + name
+
+    class Config:
+        orm_mode = True
+class MaterialsTruckingUpdate(BaseModel):
+    name: Optional[str] = None
+    material_type: Optional[str] = None
+    material_category: Optional[str] = None
+    status: Optional[str] = None
 # ===============================
 #         VENDORS
 # ===============================
 
-# from pydantic import BaseModel
-# from typing import List, Optional
 
-# # ---------- VendorMaterial Schemas ----------
-# class VendorMaterialBase(BaseModel):
-#     material: str
-#     unit: Optional[str] = None
-
-# class VendorMaterialCreate(VendorMaterialBase):
-#     pass
-
-# class VendorMaterialRead(VendorMaterialBase):
-#     id: int
-#     class Config:
-#         orm_mode = True
-
-# # ---------- Vendor Schemas ----------
-# class VendorBase(BaseModel):
-#     name: str
-#     vendor_type: Optional[str]
-#     vendor_category: Optional[str]
-#     status: Optional[str] = "active"
-
-# class VendorCreate(VendorBase):
-#     material_ids: List[int] = []
-
-# class VendorRead(VendorBase):
-#     id: int
-#     materials: List[VendorMaterialRead] = []
-#     class Config:
-#         orm_mode = True
-# schemas.py
-# schemas.py
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -234,85 +227,66 @@ class VendorRead(BaseModel):
     vendor_type: Optional[str] = None
     vendor_category: Optional[str] = None
     status: Optional[str] = None
+    
+    # 🌟 ADD THIS LINE: Exposes the full list of materials and their details 
+    materials: List[VendorMaterialRead] = [] 
+    
+    # This was already present and exposes the IDs for form pre-filling
     material_ids: List[int] = []
 
     class Config:
         orm_mode = True
 
 
+class DumpingMaterialInfo(BaseModel):
+    id: int
+    material: str
+    unit: Optional[str]
+
+    class Config:
+        orm_mode = True
+class DumpingSiteBase(BaseModel):
+    id: str
+    name: str
+    dumping_type: Optional[str]
+    dumping_category: Optional[str]
+    status: Optional[str] = None
+    material_ids: Optional[List[int]] = []
+
+class DumpingSiteCreate(DumpingSiteBase):
+    id: str
+    name: str
+    dumping_type: Optional[str]
+    dumping_category: Optional[str]
+    status: Optional[str] = None
+    material_ids: Optional[List[int]] = []
+
+class DumpingSiteRead(BaseModel):
+    id: str
+    name: str
+    dumping_type: Optional[str]
+    dumping_category: Optional[str]
+    status: Optional[str]
+    materials: List[DumpingMaterialInfo] = []
+
+    class Config:
+        orm_mode = True
+
+class DumpingSiteOptionBase(BaseModel):
+    option_type: str
+    value: str
 
 
-# # ===============================
-# #         JOB PHASES
-# # ===============================
-# # In backend/schemas.py
-
-# # ... (other imports and schemas)
-
-# # ✅ ADD THIS: A schema to represent a single, nested PhaseCode object in the response.
-# class PhaseCode(BaseModel):
-#     id: int
-#     code: str
-#     description: Optional[str] = None
-#     unit: Optional[str] = None
-
-#     class Config:
-#         orm_mode = True
-
-# # This schema is for CREATING a JobPhase. It correctly uses a list of strings.
-# class JobPhaseBase(BaseModel):
-#     job_code: str
-#     contract_no: Optional[str] = None
-#     job_description: Optional[str] = None
-#     project_engineer: Optional[str] = None
-#     jurisdiction: Optional[str] = None
-#     location_id: Optional[int] = None
-#     project_engineer_id: Optional[int] = None  # 👈 new
-#     project_engineer: Optional[str] = None     # 👈 keep existing
-#     status: ResourceStatus = ResourceStatus.ACTIVE
-#     phase_codes: List[str] = []
-#     jurisdiction: Optional[str] = None         # ✅ add this line
-
-
-
-# class JobPhaseCreate(JobPhaseBase):
-#     pass
-
-# #class JobPhaseUpdate(BaseModel):
-
-# class JobPhaseUpdate(BaseModel):
-#     contract_no: Optional[str] = None
-#     job_description: Optional[str] = None
-#     project_engineer_id: Optional[int] = None  # 👈 new
-#     project_engineer: Optional[str] = None     # 👈 keep existing
-#     jurisdiction: Optional[str] = None
-#     status: Optional[ResourceStatus] = None
-#     phase_codes: Optional[List[str]] = None
-
-
-# class JobPhase(BaseModel):
-#     id: int
-#     job_code: str
-#     contract_no: Optional[str] = None
-#     job_description: Optional[str] = None
-#     project_engineer_id: Optional[int] = None
-#     project_engineer: Optional[str] = None
-#     jurisdiction: Optional[str] = None
-#     status: ResourceStatus
-#     phase_codes: List[PhaseCode] = []
-
-#     class Config:
-#         orm_mode = True
-
-
-# class LocationBase(BaseModel):
-#     name: str
-
-# class LocationOut(LocationBase):
-#     id: int
-#     class Config:
-#         orm_mode = True
-
+class DumpingSiteOptionRead(DumpingSiteOptionBase):
+    id: int
+    class Config:
+        orm_mode = True
+class DumpingSiteUpdate(BaseModel):
+    name: Optional[str] = None
+    dumping_type: Optional[str] = None
+    dumping_category: Optional[str] = None
+    status: Optional[str] = None
+    material_ids: Optional[List[int]] = None
 # ===============================
 #         JOB PHASES
 # ===============================
@@ -390,21 +364,21 @@ class LocationOut(LocationBase):
 
 
 # ... (JobPhase response schema)
-class DumpingSiteBase(BaseModel):
-    id: str
-    name: str
-    status: str = "Active"
+# class DumpingSiteBase(BaseModel):
+#     id: str
+#     name: str
+#     status: str = "Active"
 
-class DumpingSiteCreate(DumpingSiteBase):
-    pass
+# class DumpingSiteCreate(DumpingSiteBase):
+#     pass
 
-class DumpingSiteUpdate(BaseModel):
-    name: Optional[str] = None
-    status: Optional[str] = None
+# class DumpingSiteUpdate(BaseModel):
+#     name: Optional[str] = None
+#     status: Optional[str] = None
 
-class DumpingSite(DumpingSiteBase):
-    class Config:
-        orm_mode = True
+# class DumpingSite(DumpingSiteBase):
+#     class Config:
+#         orm_mode = True
 # ===============================
 #         CREW MAPPING
 # ===============================
@@ -481,9 +455,9 @@ class CrewMappingResponse(BaseModel):
     # These fields match the SQLAlchemy relationship names
     employees: List[Employee] = []
     equipment: List[Equipment] = []
-    materials: List[Material] = []
-    vendors: List[Vendor] = []
-    dumping_sites: List[DumpingSite] = []
+    # materials: List[Material] = []
+    # vendors: List[Vendor] = []
+    # dumping_sites: List[DumpingSite] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -499,13 +473,27 @@ class CrewData(BaseModel):
     equipment: Optional[List[Any]] = []
     materials: Optional[List[Any]] = []
     vendors: Optional[List[Any]] = []
-
+class VendorSelection(BaseModel):
+    vendor_categories: List[str] = []
+    selected_vendors: List[int] = []
+    selected_vendor_materials: Dict[int, List[int]] = {}
+class MaterialSelection(BaseModel):
+    material_categories: List[str] = []
+    selected_materials: List[int] = []
+    selected_material_items: Dict[int, List[int]] = {}
+class DumpingSelection(BaseModel):
+    dumping_categories: List[str] = []
+    selected_dumping_sites: List[int] = []
+    selected_dumping_materials: Dict[int, List[int]] = {}
 class TimesheetNestedData(BaseModel):
     job: TimesheetJobData
     employees: Optional[List[Any]] = []
     equipment: Optional[List[Any]] = []
     materials: Optional[List[Any]] = []
     vendors: Optional[List[Any]] = []
+    vendor_data: Optional[VendorSelection] = None
+    material_data: Optional[MaterialSelection] = None
+    dumping_data: Optional[DumpingSelection] = None
 
 class TimesheetBase(BaseModel):
     foreman_id: int
@@ -578,8 +566,8 @@ class AppData(BaseModel):
     employees: List[Employee]
     equipment: List[Equipment]
     job_phases: List[JobPhase]
-    materials: List[Material]
-    vendors: List[Vendor]
+    # materials: List[Material]
+    # vendors: List[Vendor]
 
 class LoginRequest(BaseModel):
     username: str

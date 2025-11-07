@@ -18,6 +18,8 @@ const CrewListTable = ({ crews, users, onView, onEdit, onDelete }) => {
                     <tr>
                         <th>Foreman</th>
                         <th>Assigned Employees</th>
+                        {/* 🌟 NEW COLUMN HEADER 🌟 */}
+                        <th>Assigned Equipment</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -27,8 +29,13 @@ const CrewListTable = ({ crews, users, onView, onEdit, onDelete }) => {
                         crews.map(crew => (
                             <tr key={crew.id}>
                                 <td>{getForemanName(crew.foreman_id)}</td>
-                                {/* ✅ CORRECTED: Use the 'employees' array, not 'employee_ids' */}
-                                <td>{crew.employees.length}</td>
+                                {/* Displays count of employees */}
+                                <td>{crew.employees ? crew.employees.length : 0}</td>
+                                
+                                {/* 🌟 NEW COLUMN DATA 🌟 */}
+                                {/* Assumes crew object has an 'equipment' array property */}
+                                <td>{crew.equipment ? crew.equipment.length : 0}</td>
+                                
                                 <td className="actions-cell">
                                     <button onClick={() => onView(crew)} className="btn btn-sm btn-info">View</button>
                                     <button onClick={() => onEdit(crew)} className="btn btn-sm btn-edit">Edit</button>
@@ -38,7 +45,7 @@ const CrewListTable = ({ crews, users, onView, onEdit, onDelete }) => {
                         ))
                     ) : (
                         <tr>
-                            <td colSpan="3" style={{ textAlign: 'center' }}>No crews created yet.</td>
+                            <td colSpan="4" style={{ textAlign: 'center' }}>No crews created yet.</td>
                         </tr>
                     )}
                 </tbody>

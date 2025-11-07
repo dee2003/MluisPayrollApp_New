@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-
+import "./timesheet.css";
 const API_URL = "http://127.0.0.1:8000/api";
 
 const TimesheetForm = ({ onClose }) => {
@@ -26,34 +26,113 @@ const [location, setLocation] = useState("");
     const [loading, setLoading] = useState(false);
     const [selectedJobPhaseId, setSelectedJobPhaseId] = useState(null);
     const [unit, setUnit] = useState('C');
-    
+    const [contract, setContract] = useState("");
     const timeOfDayOptions = ["Day", "Night"];
     const weatherOptions = ["Sunny", "Cloudy", "Rainy", "Snowy", "Windy"];
 
     const [workDescription, setWorkDescription] = useState("");
-    const [concreteSupplier, setConcreteSupplier] = useState("");
-    const [concreteOrderDetails, setConcreteOrderDetails] = useState("");
-    const [concreteOnTime, setConcreteOnTime] = useState("");
-    const [asphaltOrderDetails, setAsphaltOrderDetails] = useState("");
-    const [asphaltSupplier, setAsphaltSupplier] = useState("");
-    const [aggregateOrderDetails, setAggregateOrderDetails] = useState("");
-    const [aggregateSupplier, setAggregateSupplier] = useState("");
-    const [topSoilOrderDetails, setTopSoilOrderDetails] = useState("");
-    const [topSoilSupplier, setTopSoilSupplier] = useState("");
-    const [truckingScheduleByPriority, setTruckingScheduleByPriority] = useState("");
-    const [truckingDetails, setTruckingDetails] = useState("");
-    const [sweepingDetails, setSweepingDetails] = useState("");
-    const [contract, setContract] = useState("");
-    const [suppliers, setSuppliers] = useState([]);
+    // Vendors
+const [vendorCategories, setVendorCategories] = useState([]);
+const [selectedVendorCategories, setSelectedVendorCategories] = useState([]);
+const [vendorList, setVendorList] = useState([]);
+
+// Materials & Trucking
+const [materialCategories, setMaterialCategories] = useState([]);
+const [selectedMaterialCategories, setSelectedMaterialCategories] = useState([]);
+const [materialList, setMaterialList] = useState([]);
+
+// Dumping Sites
+const [dumpingCategories, setDumpingCategories] = useState([]);
+const [selectedDumpingCategories, setSelectedDumpingCategories] = useState([]);
+const [dumpingList, setDumpingList] = useState([]);
+const [selectedVendors, setSelectedVendors] = useState([]);
+const [selectedMaterials, setSelectedMaterials] = useState([]);
+const [selectedDumpingSites, setSelectedDumpingSites] = useState([]);
+
+const [selectedVendorMaterials, setSelectedVendorMaterials] = useState({});
+
+const [selectedDumpingMaterials, setSelectedDumpingMaterials] = useState({});
+const [selectedMaterialItems, setSelectedMaterialItems] = useState({});
 
 useEffect(() => {
-  axios.get(`${API_URL}/suppliers/`)
-    .then(res => {
-      console.log("Fetched suppliers:", res.data);
-      setSuppliers(res.data);
-    })
-    .catch(err => console.error('Error fetching suppliers:', err));
+  const fetchSectionCategories = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/section-categories/`);
+      setVendorCategories(res.data.vendors || []);
+      setMaterialCategories(res.data.materials || []);
+      setDumpingCategories(res.data.dumping_sites || []);
+    } catch (err) {
+      console.error("Error fetching section categories:", err);
+    }
+  };
+  fetchSectionCategories();
 }, []);
+
+// 🏗️ Fetch vendors for selected category
+useEffect(() => {
+  if (selectedVendorCategories.length > 0) {
+    Promise.all(
+      selectedVendorCategories.map((cat) =>
+        axios.get(`${API_URL}/section-lists/vendors?category=${encodeURIComponent(cat)}`)
+      )
+    )
+      .then((responses) => {
+        // Tag each vendor with its category
+        const allVendors = responses.flatMap((res, idx) =>
+          res.data.map((v) => ({ ...v, category: selectedVendorCategories[idx] }))
+        );
+        setVendorList(allVendors);
+      })
+      .catch((err) => console.error("Error fetching vendors:", err));
+  } else {
+    setVendorList([]);
+  }
+}, [selectedVendorCategories]);
+
+
+// 🚚 Fetch materials for selected category
+useEffect(() => {
+  if (selectedMaterialCategories.length > 0) {
+    Promise.all(
+      selectedMaterialCategories.map((cat) =>
+        axios.get(`${API_URL}/section-lists/materials?category=${encodeURIComponent(cat)}`)
+      )
+    )
+      .then((responses) => {
+        // Tag each material with its category
+        const allMaterials = responses.flatMap((res, idx) =>
+          res.data.map((m) => ({ ...m, category: selectedMaterialCategories[idx] }))
+        );
+        setMaterialList(allMaterials);
+      })
+      .catch((err) => console.error("Error fetching materials:", err));
+  } else {
+    setMaterialList([]);
+  }
+}, [selectedMaterialCategories]);
+
+
+// 🗑️ Fetch dumping sites for selected category
+useEffect(() => {
+  if (selectedDumpingCategories.length > 0) {
+    Promise.all(
+      selectedDumpingCategories.map((cat) =>
+        axios.get(`${API_URL}/section-lists/dumping-sites?category=${encodeURIComponent(cat)}`)
+      )
+    )
+      .then((responses) => {
+        // Tag each dumping site with its category
+        const allDumpingSites = responses.flatMap((res, idx) =>
+          res.data.map((d) => ({ ...d, category: selectedDumpingCategories[idx] }))
+        );
+        setDumpingList(allDumpingSites);
+      })
+      .catch((err) => console.error("Error fetching dumping sites:", err));
+  } else {
+    setDumpingList([]);
+  }
+}, [selectedDumpingCategories]);
+
 
 
 // In TimesheetForm.jsx
@@ -169,6 +248,22 @@ useEffect(() => {
         const selectedSupervisor = supervisors.find(
     (sup) => sup.id === parseInt(selectedSupervisorId, 10)
   );
+  const selectionData = {
+    // Vendors
+    vendor_categories: selectedVendorCategories,
+    selected_vendors: selectedVendors,
+    selected_vendor_materials: selectedVendorMaterials,
+
+    // Materials & Trucking
+    material_categories: selectedMaterialCategories,
+    selected_materials: selectedMaterials,
+    selected_material_items: selectedMaterialItems,
+
+    // Dumping Sites
+    dumping_categories: selectedDumpingCategories,
+    selected_dumping_sites: selectedDumpingSites,
+    selected_dumping_materials: selectedDumpingMaterials,
+  };
         const timesheetData = {
             job_name: jobName,
             job: {
@@ -189,27 +284,16 @@ useEffect(() => {
       : null,
             ...foremanData,
             work_description: workDescription,
-  concrete_supplier: concreteSupplier,
-  concrete_order_details: concreteOrderDetails,
-  concrete_on_time: concreteOnTime,
-  asphalt_order_details: asphaltOrderDetails,
-  asphalt_supplier: asphaltSupplier,
-  aggregate_order_details: aggregateOrderDetails,
-  aggregate_supplier: aggregateSupplier,
-  top_soil_order_details: topSoilOrderDetails,
-  top_soil_supplier: topSoilSupplier,
-  trucking_schedule_by_priority: truckingScheduleByPriority,
-  trucking_details: truckingDetails,
-  sweeping_details: sweepingDetails,
-        };
-
+           ...selectionData,
+  };
         const payload = {
             foreman_id: parseInt(selectedForemanId, 10),
             // supervisor_id: selectedSupervisorId ? parseInt(selectedSupervisorId, 10) : null,
             date,
             job_phase_id: selectedJobPhaseId,
             data: timesheetData,
-            status: "Pending" 
+            status: "Pending" ,
+            
         };
 
         console.log("📦 Sending Payload:", payload);
@@ -226,21 +310,7 @@ useEffect(() => {
             setLoading(false);
         }
     };
-const concreteSupplierOptions = suppliers
-  .map(s => s.concrete_supplier)
-  .filter(name => name && name.trim() !== "");
 
-const asphaltSupplierOptions = suppliers
-  .map(s => s.asphalt_supplier)
-  .filter(name => name && name.trim() !== "");
-
-const aggregateSupplierOptions = suppliers
-  .map(s => s.aggregate_supplier)
-  .filter(name => name && name.trim() !== "");
-
-const topSoilSupplierOptions = suppliers
-  .map(s => s.top_soil_supplier)
-  .filter(name => name && name.trim() !== "");
     return (
         <div className="timesheet-page-container">
             <header className="page-header">
@@ -439,138 +509,345 @@ const topSoilSupplierOptions = suppliers
                         </div>
 
 </div>
-<h3>Concrete Details</h3>
-<div className="grid-2-cols">
-  <div className="form-group">
-    <label>Supplier</label>
-   <select
-      className="form-input"
-      value={concreteSupplier}
-      onChange={(e) => setConcreteSupplier(e.target.value)}
-    >
-    
-      <option value="">Select Concrete Supplier</option>
-      {concreteSupplierOptions.length === 0 && <option disabled>No suppliers available</option>}
-      {concreteSupplierOptions.map((name, index) => (
-        <option key={index} value={name}>{name}</option>
-        
-      ))}
-    </select>
-    
-</div>
-  <div className="form-group">
-    <label>Order Details</label>
-    <input type="text" value={concreteOrderDetails}
-      onChange={(e) => setConcreteOrderDetails(e.target.value)}
-      className="form-input" />
-  </div>
-  <div className="form-group">
-    <label>On Time</label>
-    <input type="text" value={concreteOnTime}
-      onChange={(e) => setConcreteOnTime(e.target.value)}
-      className="form-input" />
-  </div>
-</div>
-
-<h3>Asphalt Details</h3>
-<div className="grid-2-cols">
-  <div className="form-group">
-    <label>Supplier</label>
-     <select
-      className="form-input"
-      value={asphaltSupplier}
-      onChange={(e) => setAsphaltSupplier(e.target.value)}
-    >
-      <option value="">Select Asphalt Supplier</option>
-      {asphaltSupplierOptions.length === 0 && <option disabled>No suppliers available</option>}
-      {asphaltSupplierOptions.map((name, index) => (
-        <option key={index} value={name}>{name}</option>
-      ))}
-    </select>
-  </div>
-  <div className="form-group">
-    <label>Order Details</label>
-    <input type="text" value={asphaltOrderDetails}
-      onChange={(e) => setAsphaltOrderDetails(e.target.value)}
-      className="form-input" />
-  </div>
-</div>
-
-<h3>Aggregate Details</h3>
-<div className="grid-2-cols">
-  <div className="form-group">
-    <label>Supplier</label>
-    <select
-      className="form-input"
-      value={aggregateSupplier}
-      onChange={(e) => setAggregateSupplier(e.target.value)}
-    >
-      <option value="">Select Aggregate Supplier</option>
-      {aggregateSupplierOptions.length === 0 && <option disabled>No suppliers available</option>}
-      {aggregateSupplierOptions.map((name, index) => (
-        <option key={index} value={name}>{name}</option>
-      ))}
-    </select>
-  </div>
-  <div className="form-group">
-    <label>Order Details</label>
-    <input type="text" value={aggregateOrderDetails}
-      onChange={(e) => setAggregateOrderDetails(e.target.value)}
-      className="form-input" />
-  </div>
-</div>
-
-<h3>Top Soil Details</h3>
-<div className="grid-2-cols">
-  <div className="form-group">
-    <label>Supplier</label>
-    <select
-      className="form-input"
-      value={topSoilSupplier}
-      onChange={(e) => setTopSoilSupplier(e.target.value)}
-    >
-      <option value="">Select Top Soil Supplier</option>
-      {topSoilSupplierOptions.length === 0 && <option disabled>No suppliers available</option>}
-      {topSoilSupplierOptions.map((name, index) => (
-        <option key={index} value={name}>{name}</option>
-      ))}
-    </select>
-  </div>
-  <div className="form-group">
-    <label>Order Details</label>
-    <input type="text" value={topSoilOrderDetails}
-      onChange={(e) => setTopSoilOrderDetails(e.target.value)}
-      className="form-input" />
-  </div>
-</div>
-
-<h3>Other Details</h3>
-<div className="grid-2-cols">
+{/* === Vendor Section === */}
+{/* === Vendor Section === */}
+<h3>Vendor Details</h3>
 <div className="form-group">
-  <label>Trucking Schedule by Priority</label>
-  <input type="text"
-    value={truckingScheduleByPriority}
-    onChange={(e) => setTruckingScheduleByPriority(e.target.value)}
-    className="form-input"
-  />
+  <label>Vendor Categories</label>
+  <div className="checkbox-list">
+    {vendorCategories.map((cat) => (
+      <label key={cat} className="checkbox-item d-block">
+        <input
+          type="checkbox"
+          value={cat}
+          checked={selectedVendorCategories.includes(cat)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (e.target.checked) {
+              setSelectedVendorCategories((prev) => [...prev, value]);
+            } else {
+              setSelectedVendorCategories((prev) =>
+                prev.filter((c) => c !== value)
+              );
+              // Clear vendors for this category when unchecked
+              setVendorList((prev) =>
+                prev.filter((v) => v.category !== value)
+              );
+            }
+          }}
+        />
+        {cat}
+      </label>
+    ))}
+  </div>
 </div>
+
+{/* For each selected vendor category, show corresponding vendor selection */}
+{selectedVendorCategories.map((cat) => {
+  const categoryVendors = vendorList.filter((v) => v.category === cat);
+  return (
+    <div key={cat} className="form-group mt-3">
+      <label><b>Select {cat} Vendors</b></label>
+
+      {categoryVendors.length > 0 ? (
+        <div className="checkbox-list">
+          {categoryVendors.map((v) => (
+            <div key={v.id} className="checkbox-item mb-2">
+              {/* Vendor Checkbox */}
+              <label>
+                <input
+                  type="checkbox"
+                  value={v.id}
+                  checked={selectedVendors.includes(v.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedVendors([...selectedVendors, v.id]);
+                    } else {
+                      setSelectedVendors(selectedVendors.filter((id) => id !== v.id));
+                      setSelectedVendorMaterials((prev) => {
+                        const updated = { ...prev };
+                        delete updated[v.id];
+                        return updated;
+                      });
+                    }
+                  }}
+                />
+                {v.name}
+              </label>
+
+              {/* ✅ Removed "No materials found" message */}
+              {v.materials && v.materials.length > 0 && (
+                <div className="ms-4 mt-1">
+                  {v.materials.map((mat) => (
+                    <label key={mat.id} className="checkbox-item d-block">
+                      <input
+                        type="checkbox"
+                        value={mat.id}
+                        checked={
+                          selectedVendorMaterials[v.id]?.includes(mat.id) || false
+                        }
+                        onChange={(e) => {
+                          setSelectedVendorMaterials((prev) => {
+                            const current = prev[v.id] || [];
+                            if (e.target.checked) {
+                              return {
+                                ...prev,
+                                [v.id]: [...current, mat.id],
+                              };
+                            } else {
+                              return {
+                                ...prev,
+                                [v.id]: current.filter((id) => id !== mat.id),
+                              };
+                            }
+                          });
+                        }}
+                      />
+                      {mat.name}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        // ✅ Keep this one
+        <p className="text-muted ms-4">No vendors found for {cat}</p>
+      )}
+    </div>
+  );
+})}
+
+
+{/* === Material & Trucking Section === */}
+<h3>Material & Trucking Details</h3>
+
 <div className="form-group">
-  <label>Trucking Details</label>
-  <input type="text"
-    value={truckingDetails}
-    onChange={(e) => setTruckingDetails(e.target.value)}
-    className="form-input"
-  />
+  <label>Material Categories</label>
+  <div className="checkbox-list">
+    {materialCategories.map((cat) => (
+      <label key={cat} className="checkbox-item d-block">
+        <input
+          type="checkbox"
+          value={cat}
+          checked={selectedMaterialCategories.includes(cat)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (e.target.checked) {
+              setSelectedMaterialCategories((prev) => [...prev, value]);
+            } else {
+              setSelectedMaterialCategories((prev) =>
+                prev.filter((c) => c !== value)
+              );
+              setMaterialList((prev) =>
+                prev.filter((m) => m.category !== value)
+              );
+            }
+          }}
+        />
+        {cat}
+      </label>
+    ))}
+  </div>
 </div>
+
+{/* For each selected Material category */}
+{selectedMaterialCategories.map((cat) => {
+  const categoryMaterials = materialList.filter((m) => m.category === cat);
+
+  return (
+    <div key={cat} className="form-group mt-3">
+      <label><b>Select {cat} Materials / Trucking</b></label>
+
+      {categoryMaterials.length === 0 ? (
+        // ✅ Keep only this message
+        <p className="text-muted ms-2">No materials found for {cat}</p>
+      ) : (
+        <div className="checkbox-list">
+          {categoryMaterials.map((m) => (
+            <div key={m.id} className="checkbox-item mb-2">
+              {/* Material Checkbox */}
+              <label>
+                <input
+                  type="checkbox"
+                  value={m.id}
+                  checked={selectedMaterials.includes(m.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedMaterials([...selectedMaterials, m.id]);
+                    } else {
+                      setSelectedMaterials(
+                        selectedMaterials.filter((id) => id !== m.id)
+                      );
+                      setSelectedMaterialItems((prev) => {
+                        const updated = { ...prev };
+                        delete updated[m.id];
+                        return updated;
+                      });
+                    }
+                  }}
+                />
+                {m.name}
+              </label>
+
+              {/* ✅ Removed the “No materials found” sub-message */}
+              {m.materials && m.materials.length > 0 && (
+                <div className="ms-4 mt-1">
+                  {m.materials.map((item) => (
+                    <label key={item.id} className="checkbox-item d-block">
+                      <input
+                        type="checkbox"
+                        value={item.id}
+                        checked={
+                          selectedMaterialItems[m.id]?.includes(item.id) ||
+                          false
+                        }
+                        onChange={(e) => {
+                          setSelectedMaterialItems((prev) => {
+                            const current = prev[m.id] || [];
+                            if (e.target.checked) {
+                              return {
+                                ...prev,
+                                [m.id]: [...current, item.id],
+                              };
+                            } else {
+                              return {
+                                ...prev,
+                                [m.id]: current.filter((id) => id !== item.id),
+                              };
+                            }
+                          });
+                        }}
+                      />
+                      {item.name}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+})}
+
+
+{/* === Dumping Site Section === */}
+<h3>Dumping Site Details</h3>
+
 <div className="form-group">
-  <label>Sweeping Details</label>
-  <input type="text"
-    value={sweepingDetails}
-    onChange={(e) => setSweepingDetails(e.target.value)}
-    className="form-input"
-  />
+  <label>Dumping Categories</label>
+  <div className="checkbox-list">
+    {dumpingCategories.map((cat) => (
+      <label key={cat} className="checkbox-item d-block">
+        <input
+          type="checkbox"
+          value={cat}
+          checked={selectedDumpingCategories.includes(cat)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (e.target.checked) {
+              setSelectedDumpingCategories((prev) => [...prev, value]);
+            } else {
+              setSelectedDumpingCategories((prev) =>
+                prev.filter((c) => c !== value)
+              );
+              setDumpingList((prev) =>
+                prev.filter((d) => d.category !== value)
+              );
+            }
+          }}
+        />
+        {cat}
+      </label>
+    ))}
+  </div>
 </div>
-</div>
+
+{/* For each selected Dumping category */}
+{selectedDumpingCategories.map((cat) => {
+  const categoryDumpingSites = dumpingList.filter((d) => d.category === cat);
+
+  return (
+    <div key={cat} className="form-group mt-3">
+      <label><b>Select {cat} Dumping Sites</b></label>
+
+      {categoryDumpingSites.length === 0 ? (
+        // ✅ Keep only this message
+        <p className="text-muted ms-2">No dumping sites found for {cat}</p>
+      ) : (
+        <div className="checkbox-list">
+          {categoryDumpingSites.map((d) => (
+            <div key={d.id} className="checkbox-item mb-2">
+              {/* Dumping Site Checkbox */}
+              <label>
+                <input
+                  type="checkbox"
+                  value={d.id}
+                  checked={selectedDumpingSites.includes(d.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedDumpingSites([...selectedDumpingSites, d.id]);
+                    } else {
+                      setSelectedDumpingSites(
+                        selectedDumpingSites.filter((id) => id !== d.id)
+                      );
+                      setSelectedDumpingMaterials((prev) => {
+                        const updated = { ...prev };
+                        delete updated[d.id];
+                        return updated;
+                      });
+                    }
+                  }}
+                />
+                {d.name}
+              </label>
+
+              {/* ✅ Removed “No materials found” message */}
+              {d.materials && d.materials.length > 0 && (
+                <div className="ms-4 mt-1">
+                  {d.materials.map((mat) => (
+                    <label key={mat.id} className="checkbox-item d-block">
+                      <input
+                        type="checkbox"
+                        value={mat.id}
+                        checked={
+                          selectedDumpingMaterials[d.id]?.includes(mat.id) ||
+                          false
+                        }
+                        onChange={(e) => {
+                          setSelectedDumpingMaterials((prev) => {
+                            const current = prev[d.id] || [];
+                            if (e.target.checked) {
+                              return {
+                                ...prev,
+                                [d.id]: [...current, mat.id],
+                              };
+                            } else {
+                              return {
+                                ...prev,
+                                [d.id]: current.filter((id) => id !== mat.id),
+                              };
+                            }
+                          });
+                        }}
+                      />
+                      {mat.name}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+})}
+
+
 
                 {/* Submit Actions */}
                 <div className="form-actions">

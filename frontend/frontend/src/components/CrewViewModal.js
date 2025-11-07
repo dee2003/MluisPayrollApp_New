@@ -53,21 +53,21 @@ const CrewViewModal = ({ crew, allResources, onClose }) => {
                             {/* Pass the array of equipment objects */}
                             <ul>{renderResourceList(crew.equipment)}</ul>
                         </div>
-                        <div>
+                        {/* <div>
                             <h4>Materials</h4>
                             {/* Pass the array of material objects */}
                             <ul>{renderResourceList(crew.materials)}</ul>
-                        </div>
-                        <div>
+                        {/* </div>  */}
+                        {/* <div>
                             <h4>Work Performed</h4>
                             {/* Pass the array of vendor objects */}
                             <ul>{renderResourceList(crew.vendors)}</ul>
-                        </div>
-                        <div>
+                        {/* </div> */} 
+                        {/* <div>
                             <h4>Dumping Sites</h4>
                             {/* Pass the array of dumping site objects */}
                             <ul>{renderResourceList(crew.dumping_sites)}</ul>
-                        </div>
+                        {/* </div> */} 
                     </div>
                 ) : (
                     // Display a loading message if the crew data is not yet available

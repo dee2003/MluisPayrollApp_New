@@ -105,9 +105,9 @@ const CrewAssignmentModal = ({ mode, initialData, onSave, onClose, allCrews, all
                             {/* ✅ CORRECTED: Pass the filtered lists to the ResourceCard components */}
                             <ResourceCard title="Employees" items={activeEmployees} assignedIds={assignments.employee_ids} onToggle={handleToggleAssignment} itemType="employee" disabledIds={alreadyAssignedEmployeeIds} />
                             <ResourceCard title="Equipment" items={activeEquipment} assignedIds={assignments.equipment_ids} onToggle={handleToggleAssignment} itemType="equipment" />
-                            <ResourceCard title="Materials" items={activeMaterials} assignedIds={assignments.material_ids} onToggle={handleToggleAssignment} itemType="material" />
+                            {/* <ResourceCard title="Materials" items={activeMaterials} assignedIds={assignments.material_ids} onToggle={handleToggleAssignment} itemType="material" />
                             <ResourceCard title="Work Performed" items={activeVendors} assignedIds={assignments.vendor_ids} onToggle={handleToggleAssignment} itemType="vendor" />
-                            <ResourceCard title="Dumping Sites" items={activeDumpingSites} assignedIds={assignments.dumping_site_ids} onToggle={handleToggleAssignment} itemType="dumping_site" />
+                            <ResourceCard title="Dumping Sites" items={activeDumpingSites} assignedIds={assignments.dumping_site_ids} onToggle={handleToggleAssignment} itemType="dumping_site" /> */}
                         </div>
                     )}
                 </div>

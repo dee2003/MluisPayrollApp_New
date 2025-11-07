@@ -5,7 +5,7 @@ from typing import List
 from sqlalchemy.orm import selectinload
 
 from .. import models, schemas, database
-from ..schemas import VendorCreate, MaterialCreate
+from ..schemas import VendorCreate
 from .. import crud
 from ..database import get_db
 from sqlalchemy.orm import joinedload
@@ -56,6 +56,8 @@ def create_vendor(vendor_data: schemas.VendorCreate, db: Session = Depends(datab
     return vendor_with_materials
 
 
+
+from sqlalchemy.orm import selectinload
 
 @router.get("/vendors", response_model=List[schemas.VendorRead])
 def get_vendors(db: Session = Depends(database.get_db)):

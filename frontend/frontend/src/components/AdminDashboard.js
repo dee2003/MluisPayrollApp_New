@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import CrewMappingManager from './CrewMappingManager';
@@ -66,7 +65,8 @@ const Modal = ({ title, children, onClose, size = "medium" }) => (
 
 // --- Notification & Confirmation Modals (Unchanged) ---
 const NotificationModal = ({ message, onClose }) => (
-    <div className="modal">
+    // MODIFIED: Added inline style for centering the modal on the screen
+    <div className="modal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="modal-content small">
             <div className="modal-header">
                 <h3>Notification</h3>
@@ -79,9 +79,9 @@ const NotificationModal = ({ message, onClose }) => (
         </div>
     </div>
 );
-
 const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
-    <div className="modal">
+    // MODIFIED: Added inline style for centering the modal on the screen
+    <div className="modal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="modal-content small">
             <div className="modal-header">
                 <h3>Confirmation</h3>
@@ -103,7 +103,7 @@ const getIconForSection = (sec) => {
         case "employees": return <FaUser />;
         case "equipment": return <FaHardHat />;
         case "job-phases": return <FaTasks />;
-        case "materials": return <FaBox />;
+        case "materials_trucking": return <FaBox />;
         case "vendors": return <FaBriefcase />;
         case "crewMapping": return <FaUsers />;
         case "dumping_sites": return <FaTrash />;
@@ -113,7 +113,7 @@ const getIconForSection = (sec) => {
 
 // --- Generic Form Component (Unchanged) ---
 
-const GenericForm = ({ fields,vendorOptions, fetchVendorOptions, onSubmit, defaultValues = {}, errorMessage,genericErrorMessage, categories = [] }) => {
+const GenericForm = ({ fields,vendorOptions, fetchVendorOptions,materialOptions,fetchMaterialOptions,fetchDumpingSiteOptions,dumpingSiteOptions, onSubmit, defaultValues = {}, errorMessage,genericErrorMessage, categories = [] }) => {
     const [formData, setFormData] = useState(defaultValues);
     const [errors, setErrors] = useState({}); // Add this state for inline errors
 
@@ -159,11 +159,6 @@ const addMaterialRow = () => {
         return error;
     };
 
-    // const handleChange = e => {
-    //     const { name, value } = e.target;
-    //     setValues(prev => ({ ...prev, [name]: value }));
-    //     validateField(name, value);
-    // };
 const handleChange = (e) => {
   if (!e || !e.target) return; // prevent crash
   const { name, value } = e.target;
@@ -264,24 +259,49 @@ return (
       }
 
       // Custom select with add
-      if (field.type === "custom") {
-        return (
-          <SelectWithAdd
-            key={index}
-            label={field.label}
-            type={field.customType}
-            options={(vendorOptions?.[field.customType] || []).map((v) => ({
-              value: v,
-              label: v,
-            }))}
-            value={values[field.name] || ""}
-            onChange={(e) =>
-              setValues((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
-            reloadOptions={fetchVendorOptions}
-          />
-        );
+   if (field.type === "custom") {
+  // Decide whether this is vendor, material, or dumping site dropdown
+  const isMaterial = ["material_type", "material_category"].includes(field.customType);
+  const isDumping = ["dumping_type", "dumping_category"].includes(field.customType);
+
+  let optionsSource;
+  let reloadFunction;
+
+  if (isMaterial) {
+    optionsSource = materialOptions;
+    reloadFunction = fetchMaterialOptions;
+  } else if (isDumping) {
+    optionsSource = dumpingSiteOptions;
+    reloadFunction = fetchDumpingSiteOptions;
+  } else {
+    optionsSource = vendorOptions;
+    reloadFunction = fetchVendorOptions;
+  }
+
+  // Determine which key in optionsSource to use
+  const optionsKey = isMaterial
+    ? field.customType === "material_type" ? "type" : "category"
+    : isDumping
+      ? field.customType === "dumping_type" ? "type" : "category"
+      : field.customType;
+
+  return (
+    <SelectWithAdd
+      key={index}
+      label={field.label}
+      type={field.customType}
+      options={(optionsSource?.[optionsKey] || []).map((v) => ({
+        value: v.value || v,
+        label: v.label || v,
+      }))}
+      value={values[field.name] || ""}
+      onChange={(e) =>
+        setValues((prev) => ({ ...prev, [field.name]: e.target.value }))
       }
+      reloadOptions={reloadFunction}
+    />
+  );
+}
 
       // Regular input or select with optional Add New
       return (
@@ -639,7 +659,7 @@ const SECTIONS = [
     "users","employees","equipment","job-phases",
     "materials","vendors","dumping_sites","crewMapping"
 ];
-const ITEMS_PER_PAGE = 2; // or desired default
+const ITEMS_PER_PAGE = 10; // or desired default
 
 
 const capitalizeFirstLetter = (str) => {
@@ -657,7 +677,21 @@ const SelectWithAdd = ({ label, options, type, onChange, value, reloadOptions })
   const handleAddOption = async () => {
     if (!newOption.trim()) return;
     try {
-      await axios.post(`http://localhost:8000/api/vendor-options/${type}?value=${encodeURIComponent(newOption)}`);
+      const endpoint = type.startsWith("material_")
+      ? "material-options"
+      : type.startsWith("dumping_")
+      ? "dumping-sites/options"
+      : "vendor-options";
+
+const queryParam =
+      type.startsWith("dumping_") ? "option_type" : "type";
+
+    await axios.post(
+  `http://localhost:8000/api/${endpoint}?${queryParam}=${type}&value=${encodeURIComponent(newOption)}`
+);
+
+
+      // await axios.post(`http://localhost:8000/api/vendor-options/${type}?value=${encodeURIComponent(newOption)}`);
       alert(`${newOption} added to ${type}`);
       setNewOption("");
       setShowAdd(false);
@@ -874,6 +908,66 @@ const [subModal, setSubModal] = useState({ shown: false, type: null, title: '' }
 // ...
 const [form, setForm] = useState({});
 
+// 🔹 Dumping Site States
+const [dumpingSiteOptions, setDumpingSiteOptions] = useState({
+  type: [],
+  category: [],
+});
+
+// 🔹 Fetch Dumping Site Type & Category Options
+const fetchDumpingSiteOptions = async () => {
+  try {
+    const [typeRes, categoryRes] = await Promise.all([
+      axios.get("http://localhost:8000/api/dumping_sites/options/?option_type=dumping_type"),
+      axios.get("http://localhost:8000/api/dumping_sites/options/?option_type=dumping_category"),
+    ]);
+
+    setDumpingSiteOptions({
+      type: typeRes.data,      // ✅ no need to map again
+      category: categoryRes.data, // ✅ no need to map again
+    });
+
+    console.log("Fetched Dumping Site Options", {
+      type: typeRes.data,
+      category: categoryRes.data,
+    });
+  } catch (err) {
+    console.error("Error fetching Dumping Site Options:", err);
+  }
+};
+
+console.log("Dumping Sites Data:", data.dumping_sites);
+
+
+useEffect(() => {
+  fetchDumpingSiteOptions();
+}, []);
+
+
+const [materialOptions, setMaterialOptions] = useState({
+  type: [],
+  category: []
+});
+
+const fetchMaterialOptions = async () => {
+  try {
+    const [typeRes, categoryRes] = await Promise.all([
+      axios.get("http://localhost:8000/api/material-options?type=material_type"),
+      axios.get("http://localhost:8000/api/material-options?type=material_category"),
+    ]);
+
+    setMaterialOptions({
+  type: typeRes.data.map(opt => ({label: opt.value, value: opt.value})),
+  category: categoryRes.data.map(opt => ({label: opt.value, value: opt.value}))
+});
+
+  } catch (err) {
+    console.error("Error fetching material options:", err);
+  }
+};
+useEffect(() => {
+  fetchMaterialOptions();
+}, []);
 
 const [vendorOptions, setVendorOptions] = useState({
   type: [],
@@ -908,11 +1002,33 @@ const fetchVendorOptions = async () => {
     console.error("Error fetching vendor options:", err);
   }
 };
+const fetchMaterialsTrucking = async () => {
+  try {
+    const res = await axios.get("http://localhost:8000/api/materials-trucking/");
+    setData((prev) => ({ ...prev, materials_trucking: res.data }));
+  } catch (err) {
+    console.error("Error fetching Materials & Trucking:", err);
+  }
+};
+const fetchDumpingSites = async () => {
+  try {
+    const res = await axios.get("http://localhost:8000/api/dumping_sites/");
+    setData(prev => ({ ...prev, dumping_sites: res.data }));
+  } catch (err) {
+    console.error("Error fetching Dumping Sites:", err);
+  }
+};
+
 
 useEffect(() => {
   fetchVendorOptions();
+  fetchMaterialsTrucking();
+  fetchDumpingSites();
 }, []);
 
+useEffect(() => {
+  console.log("Fetched Material Options:", materialOptions);
+}, [materialOptions]);
 
 
 useEffect(() => {
@@ -1004,31 +1120,30 @@ const handleAddSubItem = async (type, formData) => {
 
     useEffect(() => {
         const fetchData = async () => {
-            setIsLoading(true);
-            setFetchError(null);
-            const newData = {};
-            let hasError = false;
+    setIsLoading(true);
+    setFetchError(null);
+    // Initialize newData with the existing data to preserve state
+    // in case some of the API calls fail.
+    const newData = { ...data };
+    let errorOccurred = false;
 
-            for (const endpoint of API_ENDPOINTS) {
-                try {
-                    const response = await axios.get(`${API_URL}/${endpoint}`);
-                    // Map job-phases back to job_phases key for state consistency
-                    const key = endpoint === 'job-phases' ? 'job-phases' : endpoint;
-                    newData[key] = response.data;
-                } catch (error) {
-                    // Log the error but continue trying to fetch other data
-                    console.error(`Error fetching ${endpoint}:`, error);
-                    setFetchError(`Failed to load data for ${endpoint}.`);
-                    hasError = true;
-                }
-            }
+    for (const endpoint of API_ENDPOINTS) {
+        try {
+            const response = await axios.get(`${API_URL}/${endpoint}`);
+            const key = endpoint === 'job-phases' ? 'job-phases' : endpoint;
+            newData[key] = response.data;
+        } catch (error) {
+            console.error(`Error fetching ${endpoint}:`, error);
+            setFetchError(prevError => `${prevError || ''}Failed to load data for ${endpoint}. `);
+            errorOccurred = true;
+        }
+    }
 
-            if (!hasError) {
-                setData(newData); // Replace initial state with fetched data
-            }
-            setIsLoading(false);
-        };
-        
+    // Always update the state with the new data, even if some fetches failed.
+    setData(newData);
+    setIsLoading(false);
+};
+
         fetchData();
     }, []);
 
@@ -1064,10 +1179,13 @@ const typeToStateKey = {
   employee: "employees",
   equipment: "equipment",
   job_phase: "job_phases",   // <-- use underscore, matches your state
-  material: "materials",
+  materials_trucking: "materials_trucking",
   vendor: "vendors",
-  dumping_site: "dumping_sites",
+  dumping_sites: "dumping_sites"
+  
+
 };
+    // const typeToStateKey = { user: "users", employee: "employees", equipment: "equipment", job_phase: "job-phases", materials_trucking: "materials_trucking", vendor: "vendors", dumping_sites: "dumping_sites" };
 
     const onUpdate = (key, newList) => setData(prev => ({ ...prev, [key]: newList }));
 
@@ -1112,40 +1230,140 @@ const handleAddOrUpdateItem = async (type, itemData, mode, existingItem = null) 
   setFormError('');
   setFieldErrors({});
 
-  const formData = { ...itemData }; // Raw data from form
+  const formData = {
+    ...itemData,
+    material_ids: (itemData.material_ids || []).filter(id => id !== undefined),
+  }; // Raw data from form
   let payload;
 
   try {
     // ----------------------------
     // 1. TYPE-SPECIFIC PAYLOAD PREPARATION
 if (type === "vendor") {
-  const baseUrl = "http://localhost:8000/api/vendors/";
+  const baseUrl = `${API_URL}/vendors/`;
+  let response;
+
+  try {
+    if (mode === "add") {
+      response = await axios.post(baseUrl, formData);
+
+      // ✅ Update state with the full backend response (includes materials array)
+      setData(prev => ({
+        ...prev,
+        vendors: [response.data, ...(prev.vendors || [])],
+      }));
+
+      alert("Vendor added successfully");
+    } else {
+      response = await axios.put(`${baseUrl}${existingItem.id}/`, formData);
+
+      // ✅ Replace the existing vendor with the updated one (including materials)
+      setData(prev => ({
+        ...prev,
+        vendors: (prev.vendors || []).map(v =>
+          v.id === existingItem.id ? response.data : v
+        ),
+      }));
+
+      alert("Vendor updated successfully");
+    }
+
+    if (typeof fetchVendorOptions === "function") await fetchVendorOptions();
+    closeMainModal();
+
+  } catch (err) {
+    const errorMessage = err.response?.data?.detail
+      ? JSON.stringify(err.response.data.detail)
+      : err.message;
+    alert(`Error saving vendor: ${errorMessage}`);
+  }
+
+  return;
+}
+
+
+
+
+    if (type === "materials_trucking") {
+  const baseUrl = "http://localhost:8000/api/materials-trucking/";
+
+  try {
   let response;
 
   if (mode === "add") {
     response = await axios.post(baseUrl, formData);
-    alert("Vendor added successfully");
-
-    // ✅ Immediately update UI without refresh
-    setData(prev => ({
-      ...prev,
-      vendors: [response.data, ...(prev.vendors || [])],
-    }));
+    alert("✅ Material/Trucking added successfully");
+    onUpdate("materials_trucking", [
+      response.data,
+      ...(data["materials_trucking"] || []),
+    ]);
   } else {
     response = await axios.put(`${baseUrl}${existingItem.id}/`, formData);
-    alert("Vendor updated successfully");
-
-    // ✅ Update existing vendor in list
-    setData(prev => ({
-      ...prev,
-      vendors: (prev.vendors || []).map(v =>
-        v.id === existingItem.id ? response.data : v
-      ),
-    }));
+    alert("✅ Material/Trucking updated successfully");
+    onUpdate(
+      "materials_trucking",
+      (data["materials_trucking"] || []).map((m) =>
+        m.id === existingItem.id ? response.data : m
+      )
+    );
   }
 
-  if (typeof fetchVendorOptions === "function") await fetchVendorOptions();
+  if (typeof fetchMaterialOptions === "function") await fetchMaterialOptions();
   closeMainModal();
+  return;
+
+} catch (err) {
+  console.error("Error while saving Material/Trucking:", err.response?.data || err);
+
+  // 🔹 Handle duplicate ID error or any backend 400 message
+  if (err.response && err.response.status === 400 && err.response.data?.detail) {
+    alert(`❌ ${err.response.data.detail}`);
+  } else {
+    alert("❌ Failed to save Material/Trucking. Please check your input.");
+  }
+}
+
+}
+if (type === "dumping_sites") {
+  try {
+    // Map form fields to backend expected keys
+    // const payload = {
+    //   ...formData,
+    //   dumping_type: formData.dumping_type || formData.type,        // map type -> dumping_type
+    //   dumping_category: formData.dumping_category || formData.category, // map category -> dumping_category
+    //   material_ids: (vendorData.materials || [])
+    // .map(m => m.id)      // must be valid numbers
+    // .filter(id => id !== undefined),       // map selected materials
+    // };
+
+    let response;
+    if (mode === "add") {
+      response = await axios.post("http://localhost:8000/api/dumping_sites/", formData);
+      console.log("Response:", response.data); 
+      alert("Dumping Site added successfully");
+      // onUpdate("dumping_sites", [response.data, ...(data["dumping_sites"] || [])]);
+    onUpdate(type, [response.data, ...(data[type] || [])]);
+    } else {
+      response = await axios.put(`http://localhost:8000/api/dumping_sites/${existingItem.id}/`, formData);
+      console.log("Response:", response.data); 
+      alert("Dumping Site updated successfully");
+       onUpdate(
+        type,
+        (data[type] || []).map(d => d.id === existingItem.id ? response.data : d)
+      );
+    }
+
+    if (typeof fetchDumpingSiteOptions === "function") await fetchDumpingSiteOptions();
+    closeMainModal();
+
+  } catch (err) {
+    console.error("Error saving dumping site:", err);
+    if (err.response && err.response.status === 400 && err.response.data.detail === "ID already exists") {
+      alert("❌ Dumping Site ID already exists. Please choose a different ID.");
+    } else {
+      alert("❌ Failed to save dumping site.");
+    }
+  }
   return;
 }
 
@@ -1254,62 +1472,73 @@ if (type === "vendor") {
   }
 };
 
+
+
+// In AdminDashboard.js
+
 const handleToggleStatus = async (type, item, newStatus) => {
-  const stateKey = typeToStateKey[type];
-  if (!stateKey) {
-    console.error("Could not find a state key for type:", type);
-    return;
-  }
+  const stateKey = typeToStateKey[type];
+  if (!stateKey) {
+    console.error("Could not find a state key for type:", type);
+    return;
+  }
 
-  const payload = { status: newStatus.toLowerCase() };
-  const oldStatus = item.status;
+  const payload = { status: newStatus.toLowerCase() };
+  const oldStatus = item.status;
 
-  // Optimistic update: immediately reflect change in UI
-  setData(prev => {
-    const currentList = prev[stateKey] || [];
-    const updatedList = currentList.map(it =>
-      it.id === item.id ? { ...it, status: payload.status } : it
-    );
-    return { ...prev, [stateKey]: updatedList };
-  });
+  // Optimistic update: immediately reflect change in UI
+  setData(prev => {
+    const currentList = prev[stateKey] || [];
+    const updatedList = currentList.map(it =>
+      it.id === item.id ? { ...it, status: payload.status } : it
+    );
+    return { ...prev, [stateKey]: updatedList };
+  });
 
-  try {
-    // Determine correct endpoint
-    const resourcePath = type.toLowerCase().includes('job') ? 'job-phases/by-id' : stateKey;
-const endpoint = `${API_URL}/${resourcePath}/${encodeURIComponent(item.id)}/`;
-const method = type === "vendor" ? axios.patch : axios.put; // ✅ PATCH for vendor
+  try {
+    // Determine correct endpoint
+    let resourcePath = type.toLowerCase().includes('job') ? 'job-phases/by-id' : stateKey;
 
-    // Send PUT request to backend
-const response = await method(endpoint, payload);
+    // 👇 FIX: Change 'materials_trucking' (from stateKey) to 'materials-trucking' (for API path)
+    if (resourcePath === 'materials_trucking') {
+        resourcePath = 'materials-trucking';
+    }
+    // 👆 END OF FIX 👆
 
-    // Ensure frontend state matches backend response
-    setData(prev => {
-      const currentList = prev[stateKey] || [];
-      const updatedList = currentList.map(it =>
-        it.id === item.id ? response.data : it
-      );
-      return { ...prev, [stateKey]: updatedList };
-    });
+    const endpoint = `${API_URL}/${resourcePath}/${encodeURIComponent(item.id)}/`;
+    const method = type === "vendor" ? axios.patch : axios.put; // ✅ PATCH for vendor
 
-    // Reset pagination if setting inactive
-    if (newStatus.toLowerCase() === 'inactive') {
-      setPagination(prev => ({ ...prev, [stateKey]: 1 }));
-    }
-  } catch (error) {
-    // Revert state on error
-    setData(prev => {
-      const currentList = prev[stateKey] || [];
-      const revertedList = currentList.map(it =>
-        it.id === item.id ? { ...it, status: oldStatus } : it
-      );
-      return { ...prev, [stateKey]: revertedList };
-    });
+    // Send PUT request to backend
+    const response = await method(endpoint, payload);
 
-    const errorDetail = error.response?.data?.detail;
-    const errorMessage = errorDetail ? JSON.stringify(errorDetail) : 'An unexpected error occurred.';
-    console.error(`Error updating status for ${type}:`, error);
-    alert(`Error updating status: ${errorMessage}`);
-  }
+    // Ensure frontend state matches backend response
+    setData(prev => {
+      const currentList = prev[stateKey] || [];
+      const updatedList = currentList.map(it =>
+        it.id === item.id ? response.data : it
+      );
+      return { ...prev, [stateKey]: updatedList };
+    });
+
+    // Reset pagination if setting inactive
+    if (newStatus.toLowerCase() === 'inactive') {
+      setPagination(prev => ({ ...prev, [stateKey]: 1 }));
+    }
+  } catch (error) {
+    // Revert state on error
+    setData(prev => {
+      const currentList = prev[stateKey] || [];
+      const revertedList = currentList.map(it =>
+        it.id === item.id ? { ...it, status: oldStatus } : it
+      );
+      return { ...prev, [stateKey]: revertedList };
+    });
+
+    const errorDetail = error.response?.data?.detail;
+    const errorMessage = errorDetail ? JSON.stringify(errorDetail) : 'An unexpected error occurred.';
+    console.error(`Error updating status for ${type}:`, error);
+    alert(`Error updating status: ${errorMessage}`);
+  }
 };
 
     const handleDeleteItem = async (type, itemId) => {
@@ -1356,7 +1585,7 @@ const response = await method(endpoint, payload);
           type: 'select',
           required: true,
           options: [
-            { value: '', label: 'Select Department' },
+           
             ...departments.map(d => ({ value: d.id, label: d.name }))
           ],
           onAddNew: () => openSubModal('department', 'Add New Department') // <-- ADD THIS
@@ -1367,7 +1596,7 @@ const response = await method(endpoint, payload);
           type: 'select',
           required: true,
           options: [
-            { value: '', label: 'Select Category Number' },
+
             ...categories.map(c => ({ value: c.number, label: c.number }))
           ],
           onAddNew: () => openSubModal('category', 'Add New Category') // <-- ADD THIS
@@ -1429,9 +1658,75 @@ case "vendor":
     },
   ];
 
+ case "materials_trucking":
+  return [
+    { name: "id", label: "Material/Trucking ID", type: "number", required: true },
+    { name: "name", label: "Name", required: true },
+    {
+      name: "material_type",
+      label: "Type",
+      type: "custom",
+      customType: "material_type", // new endpoint
+    },
+    {
+      name: "material_category",
+      label: "Category",
+      type: "custom",
+      customType: "material_category", // new endpoint
+    },
+    {
+      name: "materials",
+      label: "Materials (with Units)",
+      type: "multi_material",
+    },
+    {
+      name: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+      ],
+      required: true,
+      defaultValue: "active",
+    },
+  ];
+   
     
-    case "material": return [ { name: "name", label: "Material/Trucking Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
-            case "dumping_site": return [ { name: "id", label: "Site ID", required: true }, { name: "name", label: "Site Name", required: true }, { name: "status", label: "Status", type: "select", options: [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" } ], required: true, defaultValue: "Active" } ];
+  case "dumping_sites":
+  return [
+    { name: "id", label: "Dumping Site ID", type: "text", required: true },
+    { name: "name", label: "Name", required: true },
+    {
+      name: "dumping_type",
+      label: "Type",
+      type: "custom",
+      customType: "dumping_type", // endpoint for dumping type options
+    },
+    {
+      name: "dumping_category",
+      label: "Category",
+      type: "custom",
+      customType: "dumping_category", // endpoint for dumping category options
+    },
+    {
+      name: "materials",
+      label: "Materials (with Units)",
+      type: "multi_material", // same multi-material selector component
+    },
+    {
+      name: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+      ],
+      required: true,
+      defaultValue: "active",
+    },
+  ];
+
             default: return [];
         }
     };
@@ -1497,6 +1792,103 @@ const getEquipmentFormFields = (form, setForm) => {
         ),
       };
     }
+if (field.name === "material_type") {
+      return {
+        ...field,
+        customRender: () => (
+          <SelectWithAdd
+            label="Material Type"
+            type="material_type"
+            options={materialOptions.type.map((m) => ({
+              value: m,
+              label: m,
+            }))}
+            value={form.material_type}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                material_type: e.target.value,
+              }))
+            }
+            reloadOptions={fetchMaterialOptions} // new reload for material
+          />
+        ),
+      };
+    }
+
+    // 🧩 Material Category (NEW)
+    if (field.name === "material_category") {
+      return {
+        ...field,
+        customRender: () => (
+          <SelectWithAdd
+            label="Material Category"
+            type="material_category"
+            options={materialOptions.category.map((m) => ({
+              value: m,
+              label: m,
+            }))}
+            value={form.material_category}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                material_category: e.target.value,
+              }))
+            }
+            reloadOptions={fetchMaterialOptions} // new reload for material
+          />
+        ),
+      };
+    }
+// 🧱 Dumping Type
+if (field.name === "dumping_type") {
+  return {
+    ...field,
+    customRender: () => (
+      <SelectWithAdd
+        label="Dumping Type"
+        type="dumping_type"
+        options={dumpingSiteOptions.type.map((d) => ({
+          value: d,
+          label: d,
+        }))}
+        value={form.dumping_type}
+        onChange={(e) =>
+          setForm((prev) => ({
+            ...prev,
+            dumping_type: e.target.value,
+          }))
+        }
+        reloadOptions={fetchDumpingSiteOptions} // separate reload for dumping options
+      />
+    ),
+  };
+}
+
+// 🗂️ Dumping Category
+if (field.name === "dumping_category") {
+  return {
+    ...field,
+    customRender: () => (
+      <SelectWithAdd
+        label="Dumping Category"
+        type="dumping_category"
+        options={dumpingSiteOptions.category.map((d) => ({
+          value: d,
+          label: d,
+        }))}
+        value={form.dumping_category}
+        onChange={(e) =>
+          setForm((prev) => ({
+            ...prev,
+            dumping_category: e.target.value,
+          }))
+        }
+        reloadOptions={fetchDumpingSiteOptions} // separate reload for dumping options
+      />
+    ),
+  };
+}
 
     return field;
   });
@@ -1541,6 +1933,21 @@ const prepareJobForEditModal = (job) => {
             )
             .join(' ');
     };
+// ... after the useMemo hook you added ...
+
+const materialLookup = useMemo(() => {
+    const lookup = {};
+    // vendorOptions.material is an array of { value: id, label: "material — unit" }
+    (vendorOptions.material || []).forEach(m => {
+        const [material, unit] = m.label.split(' — ').map(s => s.trim());
+        lookup[m.value] = { material, unit };
+    });
+    return lookup;
+}, [vendorOptions.material]); 
+
+// ADD THIS CHECK:
+console.log("Material Lookup Map:", materialLookup); 
+
 
     const renderSection = () => {
 // In AdminDashboard.js, replace the entire function
@@ -1566,6 +1973,8 @@ const makeTableWithPagination = (type, title, headers, rowRender, extra = null) 
       (currentPage - 1) * itemsPerPage,
       currentPage * itemsPerPage
     );
+console.log('Dumping Sites data for rendering: ', pagedData);
+console.log('Raw dumping_sites data:', data[key]);
 
     // This prevents being stuck on an empty page after filtering
     if (pagedData.length === 0 && activeData.length > 0) {
@@ -1748,81 +2157,176 @@ case "equipment":
   );
 
 
+// Inside the renderSection function (case "vendors"):
 
-           case "vendors":
-  return makeTableWithPagination(
+case "vendors": return makeTableWithPagination(
     "vendor",
     "Vendors",
     ["ID", "Name", "Type", "Category", "Material", "Unit", "Status"],
     (v) => (
+        <>
+            <td key={v.id}>{v.id}</td>
+            <td key={v.name}>{v.name}</td>
+            <td key={v.vendor_type}>{v.vendor_type || "-"}</td>
+            <td key={v.vendor_category}>{v.vendor_category || "-"}</td>
+            
+            {/* FIX 1: Safely map and join Material names */}
+            <td>
+                {(v.materials && v.materials.length) 
+                    ? v.materials.map((m) => m.material).join(", ") 
+                    : "-"} 
+            </td>
+            
+            {/* FIX 2: Safely map and join Unit names */}
+            <td>
+                {(v.materials && v.materials.length) 
+                    ? v.materials.map((m) => m.unit).join(", ") 
+                    : "-"}
+            </td>
+            
+            <td key={v.status}>{capitalizeFirstLetter(v.status)}</td>
+        </>
+    ), "Vendors"
+);
+
+
+
+case "materials_trucking":
+  return makeTableWithPagination(
+    "materials_trucking",
+    "Materials & Trucking",
+    ["ID", "Name", "Type", "Category", "Materials", "Unit", "Status"],
+    (m) => {
+      // Extract materials & units safely
+      const materialNames = m.materials?.length
+        ? m.materials.map(mat => mat.material || "-").join(", ")
+        : "-";
+
+      const units = m.materials?.length
+        ? m.materials.map(mat => mat.unit || "-").join(", ")
+        : "-";
+
+      return (
+        <>
+          <td>{m.id}</td>
+          <td>{m.name}</td>
+          <td>{m.material_type || "-"}</td>
+          <td>{m.material_category || "-"}</td>
+          <td>{materialNames}</td>
+          <td>{units}</td>
+          <td>{capitalizeFirstLetter(m.status)}</td>
+        </>
+      );
+    },
+    "Materials & Trucking"
+  );
+
+case "job-phases": {
+  // ✅ Step 1: Filter active and on-hold jobs
+  const filteredJobs = (data.job_phases || []).filter((job) => {
+    const status = job.status?.toLowerCase();
+    return status === "active" || status === "on_hold";
+  });
+
+  // ✅ Step 2: Pagination setup (same as other sections)
+  const currentPage = pagination["job_phases"] || 1;
+  const itemsPerPage = ITEMSPERPAGE;
+  const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
+  const paginatedJobs = filteredJobs.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // ✅ Step 3: Render the paginated data table
+  return (
+    <div>
+      <DataTableSection
+        title="Jobs & Phases Management"
+        headers={["Job Code", "Description", "Project Engineer", "Status"]}
+        data={paginatedJobs} // ⬅️ now showing paginated data
+        renderRow={(job) => (
+          <>
+            <td>{job.job_code}</td>
+            <td>{job.job_description}</td>
+            <td>{job.project_engineer}</td>
+            <td>
+              {(() => {
+                const statusMap = {
+                  active: "Active",
+                  inactive: "Complete", // Won’t appear here because filtered out
+                  on_hold: "On Hold",
+                };
+                return statusMap[job.status?.toLowerCase()] || job.status;
+              })()}
+            </td>
+          </>
+        )}
+        onAdd={() =>
+          setJobModal({ shown: true, mode: "add", job: null })
+        }
+        onEdit={(job) =>
+          setJobModal({
+            shown: true,
+            mode: "edit",
+            job: prepareJobForEditModal(job),
+          })
+        }
+        onDelete={(job_code) =>
+          handleDeleteItem("job_phase", job_code)
+        }
+        extraActions={(job) => (
+          <button
+            className="btn btn-view btn-sm"
+            onClick={() => setViewPhasesJob(job)}
+          >
+            View Phases
+          </button>
+        )}
+        handleToggleStatus={handleToggleStatus}
+        activeSection="job_phase"
+      />
+
+      {/* ✅ Step 4: Pagination controls below table */}
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPaginate={(page) =>
+          handlePaginate("job_phases", page, totalPages)
+        }
+      />
+    </div>
+  );
+}
+
+
+         case "dumping_sites":
+  return makeTableWithPagination(
+    "dumping_sites",
+    "Dumping Sites",
+    ["ID", "Name", "Type", "Category", "Materials", "Unit", "Status"],
+    (d) => (
       <>
-        <td key={v.id}>{v.id}</td>
-        <td key={v.name}>{v.name}</td>
-        <td key={v.vendor_type}>{v.vendor_type || "-"}</td>
-        <td key={v.vendor_category}>{v.vendor_category || "-"}</td>
+        <td>{d.id || "-"}</td>
+        <td>{d.name || "-"}</td>
+        <td>{d.dumping_type || "-"}</td>
+        <td>{d.dumping_category || "-"}</td>
         <td>
-          {v.materials?.length
-            ? v.materials.map((m) => m.material).join(", ")
+          {d.materials?.length
+            ? d.materials.map(m => m.material).join(", ")
             : "-"}
         </td>
         <td>
-          {v.materials?.length
-            ? v.materials.map((m) => m.unit).join(", ")
+          {d.materials?.length
+            ? d.materials.map(m => m.unit).join(", ")
             : "-"}
         </td>
-        <td key={v.status}>{capitalizeFirstLetter(v.status)}</td>
+        <td>{d.status ? capitalizeFirstLetter(d.status) : "-"}</td>
       </>
     ),
-    "Vendors"
-  );
-            case "materials": 
-                return makeTableWithPagination("material", "Materials and Trucking", ["Name", "Status"], m => <><td key={m.name}>{m.name}</td><td key={m.status}>{capitalizeFirstLetter(m.status)}</td>
-</>, "Material and Trucking");
-case "job-phases":
-  // Filter only active and on_hold jobs
-  const filteredJobs = (data.job_phases || []).filter(
-    job => {
-      const status = job.status?.toLowerCase();
-      return status === "active" || status === "on_hold";
-    }
+    "Dumping Sites"
   );
 
-  return (
-    <DataTableSection 
-      title="Jobs & Phases Management" 
-      headers={["Job Code", "Description", "Project Engineer", "Status"]} 
-      data={filteredJobs}  // Pass filtered data here
-      renderRow={job => (
-        <>
-          <td>{job.job_code}</td> 
-          <td>{job.job_description}</td> 
-          <td>{job.project_engineer}</td> 
-          <td>
-            {(() => {
-              const statusMap = {
-                active: "Active",
-                inactive: "Complete", // Won’t appear here because filtered out
-                on_hold: "On Hold",
-              };
-              return statusMap[job.status?.toLowerCase()] || job.status;
-            })()}
-          </td>
-        </>
-      )} 
-      onAdd={() => setJobModal({ shown: true, mode: "add", job: null })} 
-      onEdit={(job) => setJobModal({ shown: true, mode: "edit", job: prepareJobForEditModal(job) })} 
-      onDelete={(job_code) => handleDeleteItem("job_phase", job_code)} 
-      extraActions={(job) => (
-        <button className="btn btn-view btn-sm" onClick={() => setViewPhasesJob(job)}> View Phases </button>
-      )} 
-      handleToggleStatus={handleToggleStatus}
-      activeSection="job_phase"
-    />
-  );
 
-            case "dumping_sites": 
-                return makeTableWithPagination("dumping_site", "Dumping Site Management", ["Site ID", "Site Name", "Status"], ds => (<><td key={ds.id}>{ds.id}</td><td key={ds.name}>{ds.name}</td><td key={ds.status}>{capitalizeFirstLetter(ds.status)}</td>
-</>), "Dumping Site");
             case "crewMapping": 
                 const allResources = { 
                             users: (data.users || []).filter(u => u.status === 'active'),
@@ -1870,12 +2374,18 @@ const addMaterialRow = () => {
     }
     vendorOptions={vendorOptions}
     fetchVendorOptions={fetchVendorOptions}
+    materialOptions={materialOptions}
+    fetchMaterialOptions={fetchMaterialOptions}
+    dumpingSiteOptions ={dumpingSiteOptions}
+    fetchDumpingSiteOptions= {fetchDumpingSiteOptions}
     categories={categories} 
     defaultValues={modal.item || {}}
     onSubmit={(formData) => {
   const finalData = {
     ...formData,
     materials: vendorData.materials,  // ✅ send as list of objects
+    dumping_type: formData.dumping_type || formData.type,      // map type → dumping_type
+  dumping_category: formData.dumping_category || formData.category,
   };
   handleAddOrUpdateItem(modal.type, finalData, modal.mode, modal.item);
 }}
@@ -1928,40 +2438,45 @@ const addMaterialRow = () => {
                     )}
                 </div>
 
-<ul className="sidebar-nav">
-  {[
-    'dashboard',
-    "users",
-    "employees",
-    "equipment",
-    "job-phases",
-    "materials",
-    "vendors",
-    "dumping_sites",
-    "crewMapping",
-  ].map((sec) => (
-    <li key={sec}>
-      <button
-        onClick={() => setActiveSection(sec)}
-        className={activeSection === sec ? "active" : ""}
-      >
-        <span className="icon">{getIconForSection(sec)}</span>
-        {!sidebarCollapsed && (
-          <span className="label">
-            {sec === "dashboard" ? "Dashboard" :
-             sec === "job-phases" ? "Jobs & Phases" :
-             sec === "crewMapping" ? "Crew Mapping" :
-             sec === "vendors" ? "Work Performed" :
-             sec === "materials" ? "Materials & Trucking" :
-             sec === "dumping_sites" ? "Dumping Sites" :
-             sec.charAt(0).toUpperCase() + sec.slice(1)}
-          </span>
-        )}
-      </button>
-    </li>
-  ))}
-</ul>
-
+                <ul className="sidebar-nav">
+                    {[
+                        'dashboard',
+                        "users",
+                        "employees",
+                        "equipment",
+                        "job-phases",
+                        "materials_trucking",
+                        "vendors",
+                        "dumping_sites",
+                        "crewMapping",
+                    ].map((sec) => (
+                        <li key={sec}>
+                            <button
+                                onClick={() => setActiveSection(sec)}
+                                className={activeSection === sec ? "active" : ""}
+                            >
+                                <span className="icon">{getIconForSection(sec)}</span>
+                                {!sidebarCollapsed && (
+                                    <span className="label">
+                                         {sec === "dashboard" // <= ADD THIS CONDITION
+        ? "Dashboard"
+        : sec === "job-phases"
+        ? "Jobs & Phases"
+                                            : sec === "crewMapping"
+                                            ? "Crew Mapping"
+                                            : sec === "vendors"
+                                            ? "Work Performed"
+                                            : sec === "materials_trucking"
+                                            ? "Materials & Trucking"
+                                            : sec === "dumping_sites"
+                                            ? "Dumping Sites"
+                                            : sec.charAt(0).toUpperCase() + sec.slice(1)}
+                                    </span>
+                                )}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
 
                 {!sidebarCollapsed && (<div className="sidebar-resizer" onMouseDown={() => setIsResizing(true)}/>)}
             </nav>

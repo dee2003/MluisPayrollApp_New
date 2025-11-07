@@ -7,7 +7,9 @@ from typing import Type, TypeVar, List
 from fastapi.encoders import jsonable_encoder
 from . import crew_services, utils_comman  # ✅ --- ADD THIS LINE ---
 from fastapi import Body
-
+# crud.py (or wherever your update function is)
+from .schemas import MaterialsTruckingUpdate
+from .models import MaterialTrucking, ResourceStatus
 from . import models, schemas
 from .database import get_db
 from sqlalchemy.orm import joinedload
@@ -268,35 +270,174 @@ def create_equipment(db: Session, equipment: schemas.EquipmentCreate):
 
 
 
-# crud.py
-
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
 from . import models, schemas
 
-# def create_vendor(db: Session, vendor_data: schemas.VendorCreate):
-#     # Convert to dict
-#     vendor_dict = vendor_data.dict()
-    
-#     # Pop out the list of IDs (not a real DB column)
-#     material_ids = vendor_dict.pop("material_ids", [])
+# -------------------------------------------------
+# MATERIALS & TRUCKING CRUD
+# -------------------------------------------------
+from sqlalchemy.orm import Session
+from . import models, schemas
 
-#     # Create Vendor without that field
-#     db_vendor = models.Vendor(**vendor_dict)
+# 🔹 Create MaterialTrucking
+def create_material_trucking(db: Session, material_data: schemas.MaterialTruckingCreate):
+    existing = db.query(models.MaterialTrucking).filter_by(id=material_data.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="ID already exists")
+    material_trucking = models.MaterialTrucking(
+        id=material_data.id,
+        name=material_data.name,
+        material_type=material_data.material_type,
+        material_category=material_data.material_category,
+        status=material_data.status.upper() if material_data.status else "ACTIVE"
+    )
+    db.add(material_trucking)
+    db.commit()
+    db.refresh(material_trucking)
 
-#     # Attach materials if provided
-#     if material_ids:
-#         materials = db.query(models.VendorMaterial).filter(
-#             models.VendorMaterial.id.in_(material_ids)
-#         ).all()
+    # Handle many-to-many links
+    if material_data.material_ids:
+        materials = db.query(models.VendorMaterial).filter(
+            models.VendorMaterial.id.in_(material_data.material_ids)
+        ).all()
+        material_trucking.materials.extend(materials)
+        db.commit()
 
-#         if not materials:
-#             raise HTTPException(status_code=400, detail="No valid material IDs found")
+    db.refresh(material_trucking)
+    return material_trucking
 
-#         db_vendor.materials.extend(materials)
 
-#     db.add(db_vendor)
-#     db.commit()
-#     db.refresh(db_vendor)
-#     return db_vendor
+# 🔹 Get All
+def get_all_material_trucking(db: Session):
+    return db.query(models.MaterialTrucking).all()
+# crud.py
+def update_material_trucking(db: Session, material_id: int, material_data: MaterialsTruckingUpdate):
+    material = db.query(models.MaterialTrucking).filter(models.MaterialTrucking.id == material_id).first()
+    if not material:
+        raise HTTPException(status_code=404, detail="Material/Trucking not found")
 
+    data = material_data.dict(exclude_unset=True)
+
+    for key, value in data.items():
+        if key == "status" and value:
+            material.status = ResourceStatus[value.upper()]
+        elif value is not None:
+            setattr(material, key, value)
+
+    db.commit()
+    db.refresh(material)
+    return material
+
+
+
+
+# 🔹 Delete
+def delete_material_trucking(db: Session, id: int):
+    mt = db.query(models.MaterialTrucking).filter(models.MaterialTrucking.id == id).first()
+    if mt:
+        db.delete(mt)
+        db.commit()
+    return mt
+
+
+
+
+
+
+
+# 🔹 Create DumpingSite
+def create_dumping_site(db: Session, site_data: schemas.DumpingSiteCreate):
+    existing = db.query(models.DumpingSite).filter_by(id=site_data.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="ID already exists")
+
+    site = models.DumpingSite(
+        id=site_data.id,
+        name=site_data.name,
+        dumping_type=site_data.dumping_type,
+        dumping_category=site_data.dumping_category,
+        status=site_data.status.upper() if site_data.status else "ACTIVE",
+    )
+    db.add(site)
+    db.commit()
+    db.refresh(site)
+
+    # 🔹 Proper many-to-many linking
+    if site_data.material_ids:
+        materials = db.query(models.VendorMaterial).filter(
+            models.VendorMaterial.id.in_(site_data.material_ids)
+        ).all()
+        if materials:
+            site.materials = materials  # assign, not extend, to ensure proper linking
+            db.commit()
+
+    db.refresh(site)
+    return site
+
+
+# 🔹 Get all Dumping Sites
+def get_all_dumping_sites(db: Session):
+    return db.query(models.DumpingSite).all()
+
+
+# crud.py
+def update_dumping_site(db: Session, site_id: str, site_data: schemas.DumpingSiteUpdate):
+    site = db.query(models.DumpingSite).filter_by(id=site_id).first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Dumping Site not found")
+
+    data = site_data.dict(exclude_unset=True)  # only fields provided in request
+
+    if 'name' in data:
+        site.name = data['name']
+    if 'dumping_type' in data:
+        site.dumping_type = data['dumping_type']
+    if 'dumping_category' in data:
+        site.dumping_category = data['dumping_category']
+    if 'status' in data:
+        site.status = data['status'].upper() if data['status'] else site.status
+    if 'material_ids' in data:
+        site.materials.clear()
+        if data['material_ids']:
+            materials = db.query(models.VendorMaterial).filter(
+                models.VendorMaterial.id.in_(data['material_ids'])
+            ).all()
+            site.materials.extend(materials)
+
+    db.commit()
+    db.refresh(site)
+    return site
+
+
+
+# 🔹 Delete Dumping Site
+def delete_dumping_site(db: Session, site_id: str):
+    site = db.query(models.DumpingSite).filter_by(id=site_id).first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Dumping Site not found")
+
+    db.delete(site)
+    db.commit()
+    return {"message": "Dumping Site deleted successfully"}
+
+
+# 🔹 Dumping Site Options (type/category)
+def get_dumping_site_options(db: Session, option_type: str):
+    options = db.query(models.DumpingSiteOption).filter_by(option_type=option_type).all()
+    return [{"label": o.value, "value": o.value} for o in options]
+
+
+def create_dumping_site_option(db: Session, option_type: str, value: str):
+    existing = (
+        db.query(models.DumpingSiteOption)
+        .filter_by(option_type=option_type, value=value)
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Option already exists")
+
+    new_option = models.DumpingSiteOption(option_type=option_type, value=value)
+    db.add(new_option)
+    db.commit()
+    db.refresh(new_option)
+    return new_option

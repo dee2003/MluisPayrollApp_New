@@ -430,89 +430,75 @@ border-color: #2b7a78;
     margin-bottom: 5px; 
 }
 
-/* Ensure the logout button is visually separated */
-
-
-/* Hover Effect - Made softer */
 /* ========================================================================= */
 /* --- DataTable Styling Improvements (FIXED & ENHANCED) --- */
 /* ========================================================================= */
 
-/* --- Base Table Header & Cell Styling --- */
+/* --- Base Table Header & Cell Styling (High Space & Middle Align) --- */
 .data-table th,
 .data-table td {
-    padding: 12px 15px;
-    border: 1px solid #f1f1f1;
+    /* Increased Vertical Space (high space) */
+    padding: 16px 20px; 
+    /* Text Align Middle (vertical alignment) */
     vertical-align: middle;
+    border: 1px solid #f1f1f1;
 }
 
 /* --- Table Header (<th>) --- */
 .data-table th {
     white-space: nowrap;
-    text-align: center; /* ← change from left to center */
+    text-align: center;
     font-weight: 600;
     color: var(--clean-primary);
     background-color: var(--clean-table-header-bg);
 }
-
 
 /* --- General Table Data Cell (<td>) --- */
 .data-table td {
     word-break: break-word; /* Allows long text to wrap in most cells */
 }
 
-/* --- NEW FIX FOR ID/NUMBER COLUMNS --- */
-/* This targets the first column to prevent IDs/numbers from breaking. */
-/* If your ID column is not the first, change ':first-child' to ':nth-child(2)' for the 2nd column, etc. */
+/* --- NEW FIX FOR ID/NUMBER COLUMNS (First Column) --- */
 .data-table th:first-child,
 .data-table td:first-child {
-    white-space: nowrap;  /* Prevents the ID/number from wrapping */
-    text-align: center;   /* Centers the ID for a cleaner look */
-    width: 80px;          /* Gives the column a consistent width */
+    white-space: nowrap;
+    text-align: center;
+    width: 80px; 
 }
 
-/* --- Actions Column Styling --- */
-/* --- Actions Column Styling (Centered) --- */
+/* Ensure the Assigned Employees (2nd) and Assigned Equipment (3rd) columns are centered */
+.data-table th:nth-child(2),
+.data-table td:nth-child(2),
+.data-table th:nth-child(3), 
+.data-table td:nth-child(3) {
+    text-align: center;
+}
+
+/* --- Actions Column Styling (Shifted Left & Centered) --- */
 .data-table td:last-child {
-    /* Set the fixed width for the column */
-    width: 140px; 
+    /* ➡️ REDUCED WIDTH: Set the fixed width to move the column to the left */
+    width: 120px; 
+    
+    /* Force content to stay on one line, preventing button wrap */
+    white-space: nowrap; 
     
     /* Center the content (buttons) horizontally using text-align */
     text-align: center; 
     
-    /* Vertically center the content (which is the default for table cells) */
+    /* Vertically center the content */
     vertical-align: middle; 
-
-    /* Remove Flexbox properties that are causing layout issues */
-    /* REMOVED: display: flex; */ 
-    /* REMOVED: justify-content: center; */
-    /* REMOVED: align-items: center; */
-    
-    /* Keep the gap, but apply it using margin/padding if needed. */
-    /* However, since you use .btn-sm, the space is usually handled well by margins or the default inline spacing. */
-    
-    /* Since we removed flex, if the buttons need a gap, they must be set as inline-block with a margin: */
-    
-    white-space: normal; /* Keep to allow the cell to behave normally */
 }
 
-/* 💡 If the buttons need space between them, add this general style for buttons inside table cells: */
+/* 💡 Adjust button margins for tighter fit in the reduced width */
 .data-table td:last-child .btn-sm {
-    margin: 0 4px; /* Add a small horizontal margin to replace the flex gap */
+    margin: 0 2px; /* Set margin to 2px for better spacing in 120px width */
     display: inline-block;
 }
 
-
-/* Responsive Adjustments for Small Screens */
+/* ========================================================================= */
+/* --- Responsive Adjustments for Small Screens (Updated) --- */
+/* ========================================================================= */
 @media (max-width: 600px) {
-  .data-table td:last-child {
-    flex-wrap: wrap;
-    justify-content: center;  /* still centered */
-    gap: 6px;
-  }
-
-
-
     /* On mobile, allow the ID column to be a bit more flexible */
     .data-table th:first-child,
     .data-table td:first-child {
@@ -521,10 +507,18 @@ border-color: #2b7a78;
     }
 
     .data-table td:last-child {
-        min-width: auto;
-        flex-wrap: wrap;
-        justify-content: flex-start;
-        gap: 5px;
+        /* Allow the width to auto-adjust on mobile */
+        width: auto; 
+        min-width: 120px; 
+        flex-wrap: wrap; 
+        justify-content: center;
+        text-align: center; 
+        white-space: normal; /* Allow wrap on mobile only */
+    }
+
+    /* Apply a small margin to mobile buttons to create the gap */
+    .data-table td:last-child .btn-sm {
+        margin: 4px 2px; 
     }
 }
 
@@ -703,3 +697,37 @@ border: 1px solid var(--clean-highlight);
 .sidebar-nav {
     scroll-behavior: smooth;
 }
+/* ========================================================================= */
+/* --- Crew Mapping Table Specific Overrides --- */
+/* (Targets the existing .data-table class) */
+/* ========================================================================= */
+
+.data-table th,
+.data-table td {
+    /* 1. Increased Vertical Space (high space) */
+    /* Increased from 12px 15px to 16px 20px for a more spacious feel */
+    padding: 16px 20px; 
+    
+    /* 2. Text Align Middle (vertical alignment) */
+    /* This ensures text sits perfectly in the middle of the cell */
+    vertical-align: middle;
+}
+
+/* Ensure the Assigned Employees and Assigned Equipment columns are centered */
+.data-table th:nth-child(2),
+.data-table td:nth-child(2),
+.data-table th:nth-child(3), /* This targets the new 'Assigned Equipment' column */
+.data-table td:nth-child(3) {
+    text-align: center;
+}
+
+/* ⚠️ Note on Action Column: */
+/* Your existing CSS for the actions column already includes:
+.data-table td:last-child {
+    vertical-align: middle; 
+    text-align: center; 
+    width: 140px; 
+    white-space: nowrap; 
+}
+This is generally sufficient for the actions column.
+*/
