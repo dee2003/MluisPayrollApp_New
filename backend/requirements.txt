@@ -23,7 +23,7 @@ torchvision==0.23.0
 torchaudio==2.6.0
 transformers==4.57.1
 paddleocr==3.2.0
-paddlepaddle==2.6.2   # 3.x is not on PyPI for Linux; use 2.6.2 instead
+paddlepaddle==3.1.1
 
 # Misc dependencies that won't break builds
 matplotlib==3.10.7
